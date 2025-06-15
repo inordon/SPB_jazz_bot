@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: festival_bot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  bot:
+    build: .
+    depends_on:
+      - postgres
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: festival_bot
+      DB_USER: postgres
+      DB_PASSWORD: password
+      MAPS_IMAGES_PATH: /app/images/
+    volumes:
+      - ./logs:/app/logs
+      - ./images:/app/images
+      - ./maps:/app/images  # Для карт фестиваля
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
