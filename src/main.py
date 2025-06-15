@@ -76,7 +76,7 @@ class WebServer:
             <meta charset="utf-8">
         </head>
         <body>
-            <h1>🎵 Festival Bot</h1>
+            <h1>Festival Bot</h1>
             <p>Бот для музыкального фестиваля работает!</p>
             <p>Время: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}</p>
             <ul>
@@ -182,7 +182,7 @@ class FestivalBot:
             logger.info(f"Environment: {config.environment}")
             logger.info(f"Debug mode: {config.debug_mode}")
 
-            # Инициализация бота
+            # Инициализация бота для aiogram 3.4.1+
             self.bot = Bot(
                 token=config.BOT_TOKEN,
                 default=DefaultBotProperties(parse_mode=ParseMode.HTML)
@@ -250,18 +250,18 @@ class FestivalBot:
         from aiogram.types import BotCommand
 
         commands = [
-            BotCommand(command="start", description="🏠 Главное меню"),
-            BotCommand(command="menu", description="📋 Показать меню"),
-            BotCommand(command="schedule", description="📅 Расписание"),
-            BotCommand(command="navigation", description="🗺 Навигация"),
-            BotCommand(command="support", description="🆘 Поддержка"),
-            BotCommand(command="feedback", description="💭 Обратная связь"),
+            BotCommand(command="start", description="Главное меню"),
+            BotCommand(command="menu", description="Показать меню"),
+            BotCommand(command="schedule", description="Расписание"),
+            BotCommand(command="navigation", description="Навигация"),
+            BotCommand(command="support", description="Поддержка"),
+            BotCommand(command="feedback", description="Обратная связь"),
         ]
 
         admin_commands = commands + [
-            BotCommand(command="admin", description="🔧 Админ панель"),
-            BotCommand(command="stats", description="📊 Статистика"),
-            BotCommand(command="health", description="🏥 Проверка здоровья"),
+            BotCommand(command="admin", description="Админ панель"),
+            BotCommand(command="stats", description="Статистика"),
+            BotCommand(command="health", description="Проверка здоровья"),
         ]
 
         try:
@@ -418,14 +418,14 @@ class FestivalBot:
 
             # Уведомление администраторов о запуске
             startup_message = f"""
-🚀 БОТ ЗАПУЩЕН
+Бот запущен
 
-⏰ Время: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
-🌍 Окружение: {config.environment}
-🔍 Режим отладки: {'Включен' if config.debug_mode else 'Отключен'}
-📊 Версия: 2.0 (с диалогами поддержки)
+Время: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
+Окружение: {config.environment}
+Режим отладки: {'Включен' if config.debug_mode else 'Отключен'}
+Версия: 2.0 (с диалогами поддержки)
 
-✅ Все системы работают нормально
+Все системы работают нормально
             """
 
             for admin_id in config.ADMIN_IDS:
@@ -468,9 +468,9 @@ class FestivalBot:
 
             if self.bot:
                 shutdown_message = f"""
-🛑 БОТ ОСТАНОВЛЕН
+Бот остановлен
 
-⏰ Время: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
+Время: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
                 """
 
                 for admin_id in config.ADMIN_IDS:
@@ -548,12 +548,12 @@ async def main():
         logger.error(f"Fatal error: {e}")
         if bot.bot:
             error_message = f"""
-💥 КРИТИЧЕСКАЯ ОШИБКА БОТА
+Критическая ошибка бота
 
-⏰ Время: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
-❌ Ошибка: {str(e)}
+Время: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
+Ошибка: {str(e)}
 
-🔧 Требуется срочное вмешательство!
+Требуется срочное вмешательство!
             """
 
             for admin_id in config.ADMIN_IDS:
@@ -567,13 +567,13 @@ async def main():
 
 if __name__ == "__main__":
     if sys.version_info < (3, 8):
-        print("❌ Python 3.8+ is required")
+        print("Python 3.8+ is required")
         sys.exit(1)
 
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n🛑 Bot stopped by user")
+        print("\nBot stopped by user")
     except Exception as e:
-        print(f"💥 Fatal error: {e}")
+        print(f"Fatal error: {e}")
         sys.exit(1)
