@@ -1485,7 +1485,7 @@ User ID: {user.id}
                 await self._send_feedback_to_channel(user, category_name, rating, comment)
 
             # Формирование ответа пользователю
-            success_text = await self._generate_feedback_response(category_name, rating, comment)
+            success_text = self._generate_feedback_response(category_name, rating, comment)
 
             if hasattr(message_or_query, 'answer'):
                 await message_or_query.answer(success_text, reply_markup=Keyboards.back_to_main())
