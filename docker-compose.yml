@@ -109,7 +109,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       TZ: ${TIMEZONE:-Europe/Moscow}
       PYTHONUNBUFFERED: 1
-      PYTHONPATH: /app/src
+      PYTHONPATH: /src
 
     volumes:
       - ./logs:/app/logs
