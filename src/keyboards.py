@@ -1,4 +1,4 @@
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from typing import List, Dict
 from config import config
 
@@ -53,14 +53,101 @@ class Keyboards:
 
     @staticmethod
     def navigation_menu() -> InlineKeyboardMarkup:
-        """Меню навигации"""
+        """Обновленное меню навигации с новыми локациями"""
         buttons = [
             [InlineKeyboardButton(text="🗺 Карта фестиваля", callback_data="map")],
+            [InlineKeyboardButton(text="🎤 Главная сцена", callback_data="route_main_stage")],
+            [InlineKeyboardButton(text="🎭 Малая сцена", callback_data="route_small_stage")],
+            [InlineKeyboardButton(text="🎓 Лекторий", callback_data="route_lecture_hall")],
             [InlineKeyboardButton(text="🍕 Фудкорт", callback_data="route_foodcourt")],
             [InlineKeyboardButton(text="🎨 Мастер-классы", callback_data="route_workshops")],
-            [InlineKeyboardButton(text="🛍 Сувениры", callback_data="route_souvenirs")],
-            [InlineKeyboardButton(text="🚻 Туалеты", callback_data="route_toilets")],
-            [InlineKeyboardButton(text="🏥 Медпункты", callback_data="route_medical")],
+            [InlineKeyboardButton(text="🛍 Сувениры", callback_data="route_souvenirs_list")],
+            [InlineKeyboardButton(text="🚻 Туалеты", callback_data="route_toilets_list")],
+            [InlineKeyboardButton(text="🏥 Медпункты", callback_data="route_medical_list")],
+            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+        ]
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
+    def multiple_locations_menu(location_type: str, title: str) -> InlineKeyboardMarkup:
+        """Меню для выбора конкретной точки из множественных локаций"""
+        locations = config.get_all_locations_of_type(location_type)
+
+        buttons = []
+
+        # Добавляем кнопки для каждой локации
+        for i, location in enumerate(locations):
+            button_text = f"📍 {location['name']}"
+            callback_data = f"route_{location_type}_{i}"
+            buttons.append([InlineKeyboardButton(text=button_text, callback_data=callback_data)])
+
+        # Кнопки навигации
+        buttons.extend([
+            [InlineKeyboardButton(text="◀️ Назад к навигации", callback_data="navigation")],
+            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+        ])
+
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
+    def location_detail_menu(location_type: str, location_index: int = None) -> InlineKeyboardMarkup:
+        """Меню для конкретной локации с кнопками действий"""
+        buttons = []
+
+        # Кнопка построения маршрута
+        if location_index is not None:
+            coords = config.get_location_coordinates(location_type, location_index)
+            route_url = config.get_yandex_route_url(coords)
+            buttons.append([InlineKeyboardButton(text="🗺 Построить маршрут", url=route_url)])
+        else:
+            # Для единичных локаций
+            coords = config.get_location_coordinates(location_type)
+            route_url = config.get_yandex_route_url(coords)
+            buttons.append([InlineKeyboardButton(text="🗺 Построить маршрут", url=route_url)])
+
+        # Кнопки возврата
+        if location_type in ["souvenirs", "toilets", "medical"]:
+            # Для множественных локаций возвращаемся к списку
+            buttons.append([InlineKeyboardButton(text="◀️ К списку",
+                                                 callback_data=f"route_{location_type}_list")])
+
+        buttons.extend([
+            [InlineKeyboardButton(text="◀️ Назад к навигации", callback_data="navigation")],
+            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+        ])
+
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
+    def stages_menu() -> InlineKeyboardMarkup:
+        """Меню для выбора сцены"""
+        buttons = [
+            [InlineKeyboardButton(text="🎤 Главная сцена", callback_data="route_main_stage")],
+            [InlineKeyboardButton(text="🎭 Малая сцена", callback_data="route_small_stage")],
+            [InlineKeyboardButton(text="◀️ Назад к навигации", callback_data="navigation")],
+            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+        ]
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
+    def educational_menu() -> InlineKeyboardMarkup:
+        """Меню для образовательных локаций"""
+        buttons = [
+            [InlineKeyboardButton(text="🎓 Лекторий", callback_data="route_lecture_hall")],
+            [InlineKeyboardButton(text="🎨 Мастер-классы", callback_data="route_workshops")],
+            [InlineKeyboardButton(text="◀️ Назад к навигации", callback_data="navigation")],
+            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+        ]
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
+    def emergency_locations_menu() -> InlineKeyboardMarkup:
+        """Меню экстренных локаций"""
+        buttons = [
+            [InlineKeyboardButton(text="🏥 Медпункты", callback_data="route_medical_list")],
+            [InlineKeyboardButton(text="🚻 Туалеты", callback_data="route_toilets_list")],
+            [InlineKeyboardButton(text="📞 Экстренные службы", callback_data="emergency_services")],
+            [InlineKeyboardButton(text="◀️ Назад к навигации", callback_data="navigation")],
             [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
         ]
         return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -169,21 +256,7 @@ class Keyboards:
         ]
         return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-    @staticmethod
-    def new_ticket_options() -> InlineKeyboardMarkup:
-        """Опции для нового тикета"""
-        buttons = [
-            [InlineKeyboardButton(text="📝 Текстовое обращение",
-                                  callback_data="new_ticket_text")],
-            [InlineKeyboardButton(text="📷 С фотографией",
-                                  callback_data="new_ticket_photo")],
-            [InlineKeyboardButton(text="📄 С документом",
-                                  callback_data="new_ticket_document")],
-            [InlineKeyboardButton(text="◀️ Назад", callback_data="support")]
-        ]
-        return InlineKeyboardMarkup(inline_keyboard=buttons)
-
-    # ================== ОБРАТНАЯ СВЯЗЬ ==================
+    # ================== ОБРАТНАЯ СВЯЗЬ (ОБНОВЛЕНО) ==================
 
     @staticmethod
     def feedback_categories() -> InlineKeyboardMarkup:
@@ -208,6 +281,41 @@ class Keyboards:
         buttons.append([InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")])
         return InlineKeyboardMarkup(inline_keyboard=buttons)
 
+    @staticmethod
+    def feedback_comment_skip() -> InlineKeyboardMarkup:
+        """Клавиатура для пропуска комментария к отзыву"""
+        buttons = [
+            [InlineKeyboardButton(text="➡️ Пропустить комментарий",
+                                  callback_data="skip_comment")],
+            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+        ]
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
+    def after_feedback_submitted() -> InlineKeyboardMarkup:
+        """Клавиатура после отправки отзыва"""
+        buttons = [
+            [InlineKeyboardButton(text="💭 Оставить еще отзыв", callback_data="feedback")],
+            [InlineKeyboardButton(text="🆘 Обратиться в поддержку", callback_data="support")],
+            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+        ]
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
+    def critical_feedback_actions(feedback_id: int) -> InlineKeyboardMarkup:
+        """Действия для критического отзыва (для админов)"""
+        buttons = [
+            [InlineKeyboardButton(text="📞 Связаться с пользователем",
+                                  callback_data=f"contact_user_{feedback_id}")],
+            [InlineKeyboardButton(text="✅ Отметить как решенный",
+                                  callback_data=f"resolve_feedback_{feedback_id}")],
+            [InlineKeyboardButton(text="📝 Добавить комментарий",
+                                  callback_data=f"comment_feedback_{feedback_id}")],
+            [InlineKeyboardButton(text="🆕 Создать тикет поддержки",
+                                  callback_data=f"create_ticket_{feedback_id}")]
+        ]
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
     # ================== СОЦИАЛЬНЫЕ СЕТИ ==================
 
     @staticmethod
@@ -219,7 +327,7 @@ class Keyboards:
         buttons.append([InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")])
         return InlineKeyboardMarkup(inline_keyboard=buttons)
 
-    # ================== АДМИН ПАНЕЛЬ ==================
+    # ================== АДМИН ПАНЕЛЬ (ОБНОВЛЕНО) ==================
 
     @staticmethod
     def admin_menu() -> InlineKeyboardMarkup:
@@ -227,11 +335,13 @@ class Keyboards:
         buttons = [
             [InlineKeyboardButton(text="🎛 Панель поддержки",
                                   callback_data="admin_support_dashboard")],
+            [InlineKeyboardButton(text="🚨 Критические отзывы",
+                                  callback_data="admin_critical_feedback")],
             [InlineKeyboardButton(text="📊 Общая статистика",
                                   callback_data="admin_stats")],
             [InlineKeyboardButton(text="🎫 Тикеты поддержки",
                                   callback_data="admin_tickets")],
-            [InlineKeyboardButton(text="💭 Отзывы",
+            [InlineKeyboardButton(text="💭 Все отзывы",
                                   callback_data="admin_feedback")],
             [InlineKeyboardButton(text="📅 Расписание",
                                   callback_data="admin_schedule")],
@@ -241,8 +351,6 @@ class Keyboards:
                                   callback_data="admin_broadcast")],
             [InlineKeyboardButton(text="⚙️ Настройки",
                                   callback_data="admin_settings")],
-            [InlineKeyboardButton(text="🔧 Система",
-                                  callback_data="admin_system")],
             [InlineKeyboardButton(text="🏠 Главное меню",
                                   callback_data="main_menu")]
         ]
@@ -264,6 +372,26 @@ class Keyboards:
                                   callback_data="admin_daily_metrics")],
             [InlineKeyboardButton(text="🔍 Поиск тикетов",
                                   callback_data="admin_search_tickets")],
+            [InlineKeyboardButton(text="◀️ Назад", callback_data="admin_menu")]
+        ]
+        return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    @staticmethod
+    def admin_critical_feedback_menu() -> InlineKeyboardMarkup:
+        """Меню для управления критическими отзывами"""
+        buttons = [
+            [InlineKeyboardButton(text="🚨 Новые критические отзывы",
+                                  callback_data="admin_new_critical")],
+            [InlineKeyboardButton(text="⏳ Ожидающие ответа",
+                                  callback_data="admin_pending_critical")],
+            [InlineKeyboardButton(text="✅ Решенные критические",
+                                  callback_data="admin_resolved_critical")],
+            [InlineKeyboardButton(text="📊 Статистика критических",
+                                  callback_data="admin_critical_stats")],
+            [InlineKeyboardButton(text="⚠️ По категориям",
+                                  callback_data="admin_critical_by_category")],
+            [InlineKeyboardButton(text="🔄 Обновить",
+                                  callback_data="admin_critical_feedback")],
             [InlineKeyboardButton(text="◀️ Назад", callback_data="admin_menu")]
         ]
         return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -394,10 +522,6 @@ class Keyboards:
         if hasattr(config, 'SUPPORT_EMAIL') and config.SUPPORT_EMAIL:
             buttons.append([InlineKeyboardButton(text="📧 Email поддержки",
                                                  url=f"mailto:{config.SUPPORT_EMAIL}")])
-
-        # Группа поддержки (если публичная)
-        # buttons.append([InlineKeyboardButton(text="👥 Группа поддержки",
-        #                                      url="https://t.me/your_support_group")])
 
         buttons.append([InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")])
 

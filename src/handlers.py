@@ -1358,7 +1358,7 @@ class BotHandlers:
         except Exception as e:
             logger.error(f"Failed to notify support about ticket closure: {e}")
 
-    # ================== ОБРАТНАЯ СВЯЗЬ ==================
+    # ================== ОБРАТНАЯ СВЯЗЬ (ОБНОВЛЕНО) ==================
 
     async def start_feedback(self, query: CallbackQuery, state: FSMContext):
         """Начало процесса оставления отзыва"""
@@ -1412,13 +1412,36 @@ class BotHandlers:
         await state.update_data(rating=rating)
 
         stars = "⭐" * rating
-        text = f"""
+
+        # Разные сообщения в зависимости от оценки
+        if rating <= 2:
+            text = f"""
 💭 Оценка: {category_name}
 🌟 Ваша оценка: {stars} ({rating}/5)
 
-Теперь напишите комментарий (необязательно):
-Что вам понравилось или что можно улучшить?
-        """
+😔 Нам очень жаль, что у вас остались негативные впечатления.
+
+Пожалуйста, расскажите подробнее, что пошло не так?
+Ваш комментарий поможет нам исправить ситуацию:
+            """
+        elif rating == 3:
+            text = f"""
+💭 Оценка: {category_name}
+🌟 Ваша оценка: {stars} ({rating}/5)
+
+Спасибо за честную оценку! 
+
+Расскажите, что можно улучшить:
+            """
+        else:  # rating >= 4
+            text = f"""
+💭 Оценка: {category_name}
+🌟 Ваша оценка: {stars} ({rating}/5)
+
+🎉 Спасибо за высокую оценку!
+
+Поделитесь, что вам особенно понравилось (необязательно):
+            """
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="➡️ Пропустить комментарий",
@@ -1439,13 +1462,14 @@ class BotHandlers:
         await self._save_feedback(query, state, None)
 
     async def _save_feedback(self, message_or_query, state: FSMContext, comment: str = None):
-        """Сохранение отзыва"""
+        """Сохранение отзыва с системой уведомлений о критических оценках"""
         try:
             data = await state.get_data()
             category = data.get("category")
             category_name = data.get("category_name")
             rating = data.get("rating")
             user_id = message_or_query.from_user.id
+            user = message_or_query.from_user
 
             # Сохранение в БД
             await self.db.add_feedback(user_id, category, rating, comment)
@@ -1453,39 +1477,20 @@ class BotHandlers:
             await self._log_user_action(user_id, "feedback_submitted", {
                 "category": category,
                 "rating": rating,
-                "has_comment": bool(comment)
+                "has_comment": bool(comment),
+                "is_critical": rating <= 2
             })
 
-            # Отправка в канал отзывов
+            # 🚨 КРИТИЧЕСКИЕ ОТЗЫВЫ (рейтинг 1-2)
+            if rating <= 2:
+                await self._handle_critical_feedback(user, category, category_name, rating, comment)
+
+            # Отправка в канал отзывов (обычная логика)
             if config.FEEDBACK_CHANNEL_ID:
-                stars = "⭐" * rating
-                feedback_text = f"""
-💭 НОВЫЙ ОТЗЫВ
+                await self._send_feedback_to_channel(user, category_name, rating, comment)
 
-📊 Категория: {category_name}
-🌟 Оценка: {stars} ({rating}/5)
-👤 От: {message_or_query.from_user.first_name}
-
-💬 Комментарий:
-{comment or 'Без комментария'}
-
-⏰ {datetime.now().strftime('%d.%m.%Y %H:%M')}
-                """
-
-                try:
-                    await self.bot.send_message(config.FEEDBACK_CHANNEL_ID, feedback_text)
-                except Exception as e:
-                    logger.error(f"Failed to send feedback to channel: {e}")
-
-            success_text = f"""
-✅ Спасибо за отзыв!
-
-📊 Категория: {category_name}
-🌟 Оценка: {"⭐" * rating} ({rating}/5)
-💬 Комментарий: {"Добавлен" if comment else "Не добавлен"}
-
-Ваше мнение поможет нам стать лучше! 🙏
-            """
+            # Формирование ответа пользователю
+            success_text = await self._generate_feedback_response(category_name, rating, comment)
 
             if hasattr(message_or_query, 'answer'):
                 await message_or_query.answer(success_text, reply_markup=Keyboards.back_to_main())
@@ -1506,6 +1511,221 @@ class BotHandlers:
                                                          reply_markup=Keyboards.back_to_main())
             await state.clear()
 
+    async def _handle_critical_feedback(self, user, category: str, category_name: str,
+                                        rating: int, comment: str = None):
+        """Обработка критических отзывов (рейтинг 1-2)"""
+        try:
+            # Определяем уровень критичности
+            if rating == 1:
+                severity = "🔴 КРИТИЧЕСКИЙ"
+                priority = "ВЫСОКИЙ"
+                emoji = "🚨"
+            else:  # rating == 2
+                severity = "🟡 НИЗКИЙ"
+                priority = "СРЕДНИЙ"
+                emoji = "⚠️"
+
+            # Формируем уведомление для администраторов
+            critical_message = f"""
+{emoji} {severity} ОТЗЫВ
+
+📊 Категория: {category_name}
+🌟 Оценка: {"⭐" * rating} ({rating}/5)
+⚡ Приоритет: {priority}
+
+👤 От пользователя:
+• Имя: {user.first_name} {user.last_name or ''}
+• Username: @{user.username or 'не указан'}
+• ID: {user.id}
+
+💬 Комментарий:
+{comment or "Без комментария"}
+
+⏰ Время: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 РЕКОМЕНДУЕМЫЕ ДЕЙСТВИЯ:
+"""
+
+            # Добавляем рекомендации в зависимости от категории
+            recommendations = self._get_category_recommendations(category, rating)
+            critical_message += "\n".join([f"• {rec}" for rec in recommendations])
+
+            critical_message += f"""
+
+📞 КОНТАКТ С ПОЛЬЗОВАТЕЛЕМ:
+• Telegram: @{user.username or 'нет username'}
+• ID для связи: {user.id}
+• Создать тикет поддержки для пользователя?
+
+💡 Этот отзыв требует оперативного внимания!
+            """
+
+            # Отправляем уведомления всем администраторам
+            for admin_id in config.ADMIN_IDS:
+                try:
+                    await self.bot.send_message(admin_id, critical_message)
+                    logger.info(f"Critical feedback notification sent to admin {admin_id}")
+                except Exception as e:
+                    logger.error(f"Failed to send critical feedback notification to admin {admin_id}: {e}")
+
+            # Если есть группа поддержки, отправляем и туда
+            if config.SUPPORT_GROUP_ID:
+                try:
+                    group_message = f"""
+{emoji} КРИТИЧЕСКИЙ ОТЗЫВ ТРЕБУЕТ ВНИМАНИЯ
+
+📊 {category_name}: {"⭐" * rating} ({rating}/5)
+👤 {user.first_name} (@{user.username or 'нет username'})
+
+💬 "{comment or 'Без комментария'}"
+
+🎯 Кто-то может связаться с пользователем для решения проблемы?
+                    """
+
+                    await self.bot.send_message(config.SUPPORT_GROUP_ID, group_message)
+                    logger.info("Critical feedback notification sent to support group")
+                except Exception as e:
+                    logger.error(f"Failed to send critical feedback notification to support group: {e}")
+
+            # Логируем критический отзыв
+            stats_logger = logging.getLogger('stats')
+            stats_logger.warning(f"Critical feedback: user_id={user.id}, category={category}, rating={rating}, comment_length={len(comment or '')}")
+
+        except Exception as e:
+            logger.error(f"Failed to handle critical feedback: {e}")
+
+    def _get_category_recommendations(self, category: str, rating: int) -> List[str]:
+        """Получение рекомендаций по категориям для критических отзывов"""
+        base_recommendations = [
+            "Связаться с пользователем для уточнения проблемы",
+            "Проанализировать ситуацию и принять меры"
+        ]
+
+        category_specific = {
+            "festival": [
+                "Проверить общую организацию мероприятия",
+                "Рассмотреть жалобы на безопасность или комфорт",
+                "Проанализировать работу всех служб"
+            ],
+            "food": [
+                "Проверить качество еды и обслуживания в фудкорте",
+                "Связаться с поставщиками питания",
+                "Проверить санитарные условия",
+                "Рассмотреть ценовую политику"
+            ],
+            "workshops": [
+                "Связаться с ведущими мастер-классов",
+                "Проверить качество материалов и оборудования",
+                "Рассмотреть организацию пространства",
+                "Проанализировать программу мастер-классов"
+            ],
+            "lectures": [
+                "Связаться с лекторами",
+                "Проверить качество звука и видимость",
+                "Рассмотреть содержание программы",
+                "Проанализировать организацию лектория"
+            ],
+            "infrastructure": [
+                "Проверить состояние туалетов и медпунктов",
+                "Рассмотреть навигацию и указатели",
+                "Проанализировать безопасность территории",
+                "Проверить доступность для людей с ограниченными возможностями"
+            ]
+        }
+
+        recommendations = base_recommendations.copy()
+        if category in category_specific:
+            recommendations.extend(category_specific[category])
+
+        # Для особо критических отзывов (рейтинг 1)
+        if rating == 1:
+            recommendations.extend([
+                "🚨 СРОЧНО: Принять немедленные меры",
+                "Рассмотреть возможность компенсации",
+                "Публично ответить на критику (если это оправдано)"
+            ])
+
+        return recommendations
+
+    async def _send_feedback_to_channel(self, user, category_name: str, rating: int, comment: str = None):
+        """Отправка обычного отзыва в канал"""
+        try:
+            stars = "⭐" * rating
+
+            # Добавляем индикатор для низких оценок
+            rating_indicator = ""
+            if rating <= 2:
+                rating_indicator = " 🚨"
+            elif rating == 3:
+                rating_indicator = " ⚠️"
+            elif rating >= 4:
+                rating_indicator = " ✨"
+
+            feedback_text = f"""
+💭 НОВЫЙ ОТЗЫВ{rating_indicator}
+
+📊 Категория: {category_name}
+🌟 Оценка: {stars} ({rating}/5)
+👤 От: {user.first_name}
+
+💬 Комментарий:
+{comment or 'Без комментария'}
+
+⏰ {datetime.now().strftime('%d.%m.%Y %H:%M')}
+            """
+
+            await self.bot.send_message(config.FEEDBACK_CHANNEL_ID, feedback_text)
+            logger.info(f"Feedback sent to channel: rating={rating}, category={category_name}")
+
+        except Exception as e:
+            logger.error(f"Failed to send feedback to channel: {e}")
+
+    def _generate_feedback_response(self, category_name: str, rating: int, comment: str = None) -> str:
+        """Генерация ответа пользователю в зависимости от оценки"""
+        stars = "⭐" * rating
+
+        if rating <= 2:
+            response = f"""
+😔 Спасибо за честный отзыв
+
+📊 Категория: {category_name}
+🌟 Оценка: {stars} ({rating}/5)
+💬 Комментарий: {"Добавлен" if comment else "Не добавлен"}
+
+Мы очень сожалеем о негативном опыте и обязательно разберемся с ситуацией.
+
+🔧 Наши администраторы уже уведомлены о проблеме.
+📞 Если нужна срочная помощь, обратитесь в поддержку: /start → 🆘 Поддержка
+
+💙 Мы ценим ваше мнение и работаем над улучшениями!
+            """
+        elif rating == 3:
+            response = f"""
+🤔 Спасибо за честную оценку
+
+📊 Категория: {category_name}
+🌟 Оценка: {stars} ({rating}/5)
+💬 Комментарий: {"Добавлен" if comment else "Не добавлен"}
+
+Ваше мнение поможет нам стать лучше!
+
+💡 Если есть конкретные предложения по улучшению, напишите в поддержку.
+            """
+        else:  # rating >= 4
+            response = f"""
+🎉 Спасибо за отличный отзыв!
+
+📊 Категория: {category_name}
+🌟 Оценка: {stars} ({rating}/5)
+💬 Комментарий: {"Добавлен" if comment else "Не добавлен"}
+
+Мы рады, что вам понравилось! 
+
+🌟 Поделитесь впечатлениями с друзьями в наших соцсетях!
+            """
+
+        return response
     # ================== СОЦИАЛЬНЫЕ СЕТИ ==================
 
     async def show_social_networks(self, query: CallbackQuery):

@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Dict, Tuple
 from dataclasses import dataclass
 from dotenv import load_dotenv
 
@@ -49,28 +49,155 @@ class Config:
     YANDEX_MAPS_BASE_URL = "https://yandex.ru/maps/?rtext="
 
     # Координаты фестиваля (основная точка)
-    FESTIVAL_COORDINATES = os.getenv("FESTIVAL_COORDINATES", "55.7558,37.6176")  # Широта, долгота
+    FESTIVAL_COORDINATES = os.getenv("FESTIVAL_COORDINATES", "55.7558,37.6176")
 
-    # Координаты ключевых точек фестиваля
-    LOCATIONS_COORDINATES = {
-        "foodcourt": os.getenv("FOODCOURT_COORDINATES", "55.7562,37.6174"),      # Фудкорт
-        "workshops": os.getenv("WORKSHOPS_COORDINATES", "55.7556,37.6182"),      # Мастер-классы
-        "souvenirs": os.getenv("SOUVENIRS_COORDINATES", "55.7560,37.6170"),      # Сувениры
-        "toilets": os.getenv("TOILETS_COORDINATES", "55.7559,37.6178"),          # Туалеты
-        "medical": os.getenv("MEDICAL_COORDINATES", "55.7558,37.6176"),          # Медпункт
+    # Координаты ключевых единичных точек
+    SINGLE_LOCATIONS_COORDINATES = {
+        "foodcourt": os.getenv("FOODCOURT_COORDINATES", "55.7562,37.6174"),
+        "workshops": os.getenv("WORKSHOPS_COORDINATES", "55.7556,37.6182"),
+        "main_stage": os.getenv("MAIN_STAGE_COORDINATES", "55.7558,37.6176"),
+        "small_stage": os.getenv("SMALL_STAGE_COORDINATES", "55.7560,37.6180"),
+        "lecture_hall": os.getenv("LECTURE_HALL_COORDINATES", "55.7559,37.6179"),
     }
+
+    # Множественные локации
+    @property
+    def MULTIPLE_LOCATIONS(self) -> Dict[str, List[Dict[str, str]]]:
+        """Получение множественных локаций с названиями"""
+        locations = {}
+
+        # Сувениры
+        souvenirs_coords = os.getenv("SOUVENIRS_COORDINATES", "55.7560,37.6170").split(";")
+        souvenirs_names = os.getenv("SOUVENIRS_NAMES", "Сувенирный магазин").split(";")
+        locations["souvenirs"] = [
+            {"name": name.strip(), "coordinates": coord.strip()}
+            for name, coord in zip(souvenirs_names, souvenirs_coords)
+        ]
+
+        # Туалеты
+        toilets_coords = os.getenv("TOILETS_COORDINATES", "55.7559,37.6178").split(";")
+        toilets_names = os.getenv("TOILETS_NAMES", "Туалеты").split(";")
+        locations["toilets"] = [
+            {"name": name.strip(), "coordinates": coord.strip()}
+            for name, coord in zip(toilets_names, toilets_coords)
+        ]
+
+        # Медпункты
+        medical_coords = os.getenv("MEDICAL_COORDINATES", "55.7558,37.6176").split(";")
+        medical_names = os.getenv("MEDICAL_NAMES", "Медпункт").split(";")
+        locations["medical"] = [
+            {"name": name.strip(), "coordinates": coord.strip()}
+            for name, coord in zip(medical_names, medical_coords)
+        ]
+
+        return locations
 
     # Пути к изображениям карт
     MAPS_IMAGES_PATH: str = os.getenv("MAPS_IMAGES_PATH", "images/")
 
-    # Пути к изображениям карт
+    # Пути к изображениям карт (обновлено)
     MAPS_IMAGES = {
         "festival_map": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "festival_map.jpg"),
+        "main_stage": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "main_stage_map.jpg"),
+        "small_stage": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "small_stage_map.jpg"),
+        "lecture_hall": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "lecture_hall_map.jpg"),
         "foodcourt": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "foodcourt_map.jpg"),
         "workshops": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "workshops_map.jpg"),
         "souvenirs": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "souvenirs_map.jpg"),
         "toilets": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "toilets_map.jpg"),
         "medical": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "medical_map.jpg")
+    }
+
+    # Информация о локациях для отображения
+    LOCATIONS_INFO = {
+        "main_stage": {
+            "title": "🎤 Главная сцена",
+            "description": "Основная концертная площадка фестиваля",
+            "details": [
+                "🎵 Главные хедлайнеры",
+                "🔊 Профессиональная звуковая система",
+                "💡 Световое шоу",
+                "📺 Большие экраны",
+                "👥 Вместимость: 5000 человек"
+            ]
+        },
+        "small_stage": {
+            "title": "🎭 Малая сцена",
+            "description": "Камерная площадка для небольших составов",
+            "details": [
+                "🎶 Камерные выступления",
+                "🎸 Инди и альтернатива",
+                "🎤 Молодые исполнители",
+                "🎺 Джаз и блюз",
+                "👥 Вместимость: 1000 человек"
+            ]
+        },
+        "lecture_hall": {
+            "title": "🎓 Лекционный зал",
+            "description": "Образовательная зона для лекций и семинаров",
+            "details": [
+                "📚 Лекции о музыке",
+                "🎼 Мастер-классы теории",
+                "💼 Музыкальный бизнес",
+                "🧠 Психология творчества",
+                "👥 Вместимость: 200 человек"
+            ]
+        },
+        "foodcourt": {
+            "title": "🍕 Фудкорт",
+            "description": "Зона питания с различными кафе и ресторанами",
+            "details": [
+                "🍕 Пицца и итальянская кухня",
+                "🍔 Бургеры и фаст-фуд",
+                "🥗 Здоровое питание",
+                "☕ Кофе и напитки",
+                "🍰 Десерты и выпечка"
+            ]
+        },
+        "workshops": {
+            "title": "🎨 Зона мастер-классов",
+            "description": "Образовательная зона с творческими мастер-классами",
+            "details": [
+                "🎸 Музыкальные инструменты",
+                "🎤 Вокальные техники",
+                "💻 Создание музыки",
+                "✍️ Написание песен",
+                "🎧 Звукорежиссура"
+            ]
+        },
+        "souvenirs": {
+            "title": "🛍 Сувенирные магазины",
+            "description": "Официальная сувенирная продукция фестиваля",
+            "details": [
+                "👕 Футболки и толстовки",
+                "🧢 Кепки и головные уборы",
+                "🎸 Музыкальные аксессуары",
+                "📀 Диски и винил",
+                "🎁 Подарочные наборы"
+            ]
+        },
+        "toilets": {
+            "title": "🚻 Туалеты",
+            "description": "Санитарные зоны на территории фестиваля",
+            "details": [
+                "🚹 Мужские туалеты",
+                "🚺 Женские туалеты",
+                "♿ Для людей с ограниченными возможностями",
+                "👶 Пеленальные комнаты",
+                "🧼 Умывальники"
+            ]
+        },
+        "medical": {
+            "title": "🏥 Медицинские пункты",
+            "description": "Медицинская помощь и первая помощь",
+            "details": [
+                "🩺 Врачи и медсестры",
+                "💊 Базовые медикаменты",
+                "🚑 Связь с скорой помощью",
+                "📞 Экстренная связь: 112",
+                "⚕️ Круглосуточно"
+            ]
+        }
     }
 
     # Rate limiting настройки
@@ -93,6 +220,56 @@ class Config:
             "photo", "document", "video", "audio"
         ],
         "max_file_size_mb": 20                  # Максимальный размер файла (МБ)
+    }
+
+    # Настройки критических отзывов
+    CRITICAL_FEEDBACK_SETTINGS = {
+        "critical_rating_threshold": 2,        # Оценки <= 2 считаются критическими
+        "urgent_rating_threshold": 1,          # Оценки <= 1 считаются срочными
+        "notify_admins": True,                  # Уведомлять администраторов
+        "notify_support_group": True,           # Уведомлять группу поддержки
+        "auto_create_ticket": False,            # Автоматически создавать тикет поддержки
+        "require_immediate_action": True,       # Требовать немедленных действий для рейтинга 1
+        "max_critical_per_hour": 5,            # Максимум критических уведомлений в час
+        "escalation_delay_hours": 2,           # Время для эскалации без ответа
+    }
+
+    # Рекомендации по категориям для критических отзывов
+    CATEGORY_RECOMMENDATIONS = {
+        "festival": [
+            "Проверить общую организацию мероприятия",
+            "Рассмотреть жалобы на безопасность или комфорт",
+            "Проанализировать работу всех служб",
+            "Связаться с руководством фестиваля"
+        ],
+        "food": [
+            "Проверить качество еды и обслуживания в фудкорте",
+            "Связаться с поставщиками питания",
+            "Проверить санитарные условия",
+            "Рассмотреть ценовую политику",
+            "Проконтролировать время ожидания"
+        ],
+        "workshops": [
+            "Связаться с ведущими мастер-классов",
+            "Проверить качество материалов и оборудования",
+            "Рассмотреть организацию пространства",
+            "Проанализировать программу мастер-классов",
+            "Проверить уровень подготовки инструкторов"
+        ],
+        "lectures": [
+            "Связаться с лекторами",
+            "Проверить качество звука и видимость",
+            "Рассмотреть содержание программы",
+            "Проанализировать организацию лектория",
+            "Проверить комфорт аудитории"
+        ],
+        "infrastructure": [
+            "Проверить состояние туалетов и медпунктов",
+            "Рассмотреть навигацию и указатели",
+            "Проанализировать безопасность территории",
+            "Проверить доступность для людей с ограниченными возможностями",
+            "Улучшить освещение и чистоту"
+        ]
     }
 
     # Настройки мониторинга
@@ -124,6 +301,7 @@ class Config:
         "notify_admins_urgent_tickets": True,   # Уведомлять об срочных тикетах
         "notify_admins_system_errors": True,    # Уведомлять о системных ошибках
         "notify_admins_high_load": True,        # Уведомлять о высокой нагрузке
+        "notify_admins_critical_feedback": True, # Уведомлять о критических отзывах
         "daily_stats_report": True,             # Ежедневный отчет по статистике
         "weekly_summary_report": True           # Еженедельная сводка
     }
@@ -179,6 +357,84 @@ class Config:
 💬 Комментарий: {has_comment}
 
 Ваше мнение поможет нам стать лучше! 🙏
+        """,
+
+        # Шаблоны для критических отзывов
+        "critical_feedback_admin": """
+🚨 {severity} ОТЗЫВ
+
+📊 Категория: {category_name}
+🌟 Оценка: {stars} ({rating}/5)
+⚡ Приоритет: {priority}
+
+👤 От пользователя:
+• Имя: {user_name}
+• Username: @{username}
+• ID: {user_id}
+
+💬 Комментарий:
+{comment}
+
+⏰ Время: {timestamp}
+
+🎯 РЕКОМЕНДУЕМЫЕ ДЕЙСТВИЯ:
+{recommendations}
+
+📞 КОНТАКТ С ПОЛЬЗОВАТЕЛЕМ:
+• Telegram: @{username}
+• ID для связи: {user_id}
+
+💡 Этот отзыв требует оперативного внимания!
+        """,
+
+        "critical_feedback_support_group": """
+🚨 КРИТИЧЕСКИЙ ОТЗЫВ ТРЕБУЕТ ВНИМАНИЯ
+
+📊 {category_name}: {stars} ({rating}/5)
+👤 {user_name} (@{username})
+
+💬 "{comment}"
+
+🎯 Кто-то может связаться с пользователем для решения проблемы?
+        """,
+
+        "critical_feedback_user_response": """
+😔 Спасибо за честный отзыв
+
+📊 Категория: {category_name}
+🌟 Оценка: {stars} ({rating}/5)
+💬 Комментарий: {comment_status}
+
+Мы очень сожалеем о негативном опыте и обязательно разберемся с ситуацией.
+
+🔧 Наши администраторы уже уведомлены о проблеме.
+📞 Если нужна срочная помощь, обратитесь в поддержку: /start → 🆘 Поддержка
+
+💙 Мы ценим ваше мнение и работаем над улучшениями!
+        """,
+
+        "neutral_feedback_user_response": """
+🤔 Спасибо за честную оценку
+
+📊 Категория: {category_name}
+🌟 Оценка: {stars} ({rating}/5)
+💬 Комментарий: {comment_status}
+
+Ваше мнение поможет нам стать лучше!
+
+💡 Если есть конкретные предложения по улучшению, напишите в поддержку.
+        """,
+
+        "positive_feedback_user_response": """
+🎉 Спасибо за отличный отзыв!
+
+📊 Категория: {category_name}
+🌟 Оценка: {stars} ({rating}/5)
+💬 Комментарий: {comment_status}
+
+Мы рады, что вам понравилось!
+
+🌟 Поделитесь впечатлениями с друзьями в наших соцсетях!
         """
     }
 
@@ -193,6 +449,8 @@ class Config:
         "support": "🧑‍💼",
         "user": "👤",
         "urgent": "🚨",
+        "critical": "🔴",
+        "high": "🟡",
         "closed": "🔒",
         "open": "🔓",
         "new": "🆕",
@@ -208,6 +466,71 @@ class Config:
         if not start_coords:
             start_coords = cls.FESTIVAL_COORDINATES
         return f"{cls.YANDEX_MAPS_BASE_URL}{start_coords}~{destination_coords}&rtt=auto"
+
+    def get_location_coordinates(self, location_type: str, location_index: int = 0) -> str:
+        """Получение координат локации по типу и индексу"""
+        # Для единичных локаций
+        if location_type in self.SINGLE_LOCATIONS_COORDINATES:
+            return self.SINGLE_LOCATIONS_COORDINATES[location_type]
+
+        # Для множественных локаций
+        multiple_locations = self.MULTIPLE_LOCATIONS
+        if location_type in multiple_locations:
+            locations = multiple_locations[location_type]
+            if 0 <= location_index < len(locations):
+                return locations[location_index]["coordinates"]
+
+        # По умолчанию возвращаем координаты фестиваля
+        return self.FESTIVAL_COORDINATES
+
+    def get_location_name(self, location_type: str, location_index: int = 0) -> str:
+        """Получение названия локации по типу и индексу"""
+        # Для множественных локаций
+        multiple_locations = self.MULTIPLE_LOCATIONS
+        if location_type in multiple_locations:
+            locations = multiple_locations[location_type]
+            if 0 <= location_index < len(locations):
+                return locations[location_index]["name"]
+
+        # Для единичных локаций возвращаем стандартное название
+        location_titles = {
+            "main_stage": "Главная сцена",
+            "small_stage": "Малая сцена",
+            "lecture_hall": "Лекционный зал",
+            "foodcourt": "Фудкорт",
+            "workshops": "Мастер-классы"
+        }
+
+        return location_titles.get(location_type, "Неизвестная локация")
+
+    def get_all_locations_of_type(self, location_type: str) -> List[Dict[str, str]]:
+        """Получение всех локаций определенного типа"""
+        multiple_locations = self.MULTIPLE_LOCATIONS
+        if location_type in multiple_locations:
+            return multiple_locations[location_type]
+
+        # Для единичных локаций
+        if location_type in self.SINGLE_LOCATIONS_COORDINATES:
+            return [{
+                "name": self.get_location_name(location_type),
+                "coordinates": self.SINGLE_LOCATIONS_COORDINATES[location_type]
+            }]
+
+        return []
+
+    def get_critical_feedback_config(self) -> dict:
+        """Получение конфигурации критических отзывов"""
+        return self.CRITICAL_FEEDBACK_SETTINGS
+
+    def get_category_recommendations(self, category: str) -> List[str]:
+        """Получение рекомендаций по категории"""
+        base_recommendations = [
+            "Связаться с пользователем для уточнения проблемы",
+            "Проанализировать ситуацию и принять меры"
+        ]
+
+        category_specific = self.CATEGORY_RECOMMENDATIONS.get(category, [])
+        return base_recommendations + category_specific
 
     def get_database_url(self) -> str:
         """Получение URL для подключения к базе данных"""
@@ -238,6 +561,25 @@ class Config:
         if self.FEEDBACK_CHANNEL_ID and not self.FEEDBACK_CHANNEL_ID.startswith('-'):
             errors.append("FEEDBACK_CHANNEL_ID should start with '-'")
 
+        # Проверка координат
+        def validate_coordinates(coords_str: str, name: str):
+            try:
+                for coord_pair in coords_str.split(";"):
+                    lat, lng = coord_pair.strip().split(",")
+                    float(lat.strip())
+                    float(lng.strip())
+            except (ValueError, IndexError):
+                errors.append(f"Invalid coordinates format for {name}: {coords_str}")
+
+        # Проверяем основные координаты
+        validate_coordinates(self.FESTIVAL_COORDINATES, "FESTIVAL_COORDINATES")
+
+        # Проверяем множественные координаты
+        for location_type in ["souvenirs", "toilets", "medical"]:
+            locations = self.get_all_locations_of_type(location_type)
+            for i, location in enumerate(locations):
+                validate_coordinates(location["coordinates"], f"{location_type}[{i}]")
+
         if errors:
             print("Configuration errors:")
             for error in errors:
@@ -245,21 +587,6 @@ class Config:
             return False
 
         return True
-
-    def get_admin_usernames(self) -> List[str]:
-        """Получение списка username администраторов (если известны)"""
-        # Здесь можно добавить маппинг ID -> username для удобства
-        admin_usernames = {
-            # Пример: 123456789: "@admin_user"
-        }
-        return [admin_usernames.get(admin_id, f"ID:{admin_id}") for admin_id in self.ADMIN_IDS]
-
-    def get_support_staff_usernames(self) -> List[str]:
-        """Получение списка username сотрудников поддержки"""
-        staff_usernames = {
-            # Пример: 111222333: "@support_user"
-        }
-        return [staff_usernames.get(staff_id, f"ID:{staff_id}") for staff_id in self.SUPPORT_STAFF_IDS]
 
     def is_admin(self, user_id: int) -> bool:
         """Проверка, является ли пользователь администратором"""
@@ -354,6 +681,22 @@ if __name__ == "__main__":
         print(f"📧 Email configured: {'Yes' if config.EMAIL_USER else 'No'}")
         print(f"🏪 Support group: {'Yes' if config.SUPPORT_GROUP_ID else 'No'}")
         print(f"📢 Feedback channel: {'Yes' if config.FEEDBACK_CHANNEL_ID else 'No'}")
+
+        # Показываем информацию о локациях
+        print(f"\n📍 Locations configured:")
+        for location_type in ["souvenirs", "toilets", "medical"]:
+            locations = config.get_all_locations_of_type(location_type)
+            print(f"  {location_type}: {len(locations)} points")
+            for i, loc in enumerate(locations):
+                print(f"    {i+1}. {loc['name']} ({loc['coordinates']})")
+
+        # Показываем настройки критических отзывов
+        critical_config = config.get_critical_feedback_config()
+        print(f"\n🚨 Critical feedback settings:")
+        print(f"  Critical threshold: <= {critical_config['critical_rating_threshold']} stars")
+        print(f"  Urgent threshold: <= {critical_config['urgent_rating_threshold']} stars")
+        print(f"  Notify admins: {critical_config['notify_admins']}")
+        print(f"  Notify support group: {critical_config['notify_support_group']}")
     else:
         print("❌ Configuration validation failed")
         exit(1)

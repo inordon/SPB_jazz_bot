@@ -139,7 +139,7 @@ class Database:
                 )
             """)
 
-            # Отзывы
+            # Отзывы (обновленная версия с поддержкой критических отзывов)
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS feedback (
                     id SERIAL PRIMARY KEY,
@@ -147,7 +147,37 @@ class Database:
                     category VARCHAR(100),
                     rating INTEGER CHECK (rating >= 1 AND rating <= 5),
                     comment TEXT,
+                    is_critical BOOLEAN DEFAULT FALSE,
+                    admin_notified BOOLEAN DEFAULT FALSE,
+                    admin_response TEXT,
+                    admin_response_at TIMESTAMP,
+                    status VARCHAR(50) DEFAULT 'new',
+                    priority VARCHAR(20) DEFAULT 'normal',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # Таблица для отслеживания действий по критическим отзывам
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS critical_feedback_actions (
+                    id SERIAL PRIMARY KEY,
+                    feedback_id INTEGER REFERENCES feedback(id) ON DELETE CASCADE,
+                    admin_user_id BIGINT,
+                    action_type VARCHAR(100),
+                    action_description TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
+            # Таблица для ограничения частоты уведомлений
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS notification_rate_limits (
+                    id SERIAL PRIMARY KEY,
+                    notification_type VARCHAR(100),
+                    admin_user_id BIGINT,
+                    notifications_sent INTEGER DEFAULT 0,
+                    last_notification_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    reset_at TIMESTAMP DEFAULT (CURRENT_TIMESTAMP + INTERVAL '1 hour')
                 )
             """)
 
@@ -205,6 +235,12 @@ class Database:
             # Создание индексов
             await self._create_indexes(conn)
 
+            # Создание функций и триггеров
+            await self._create_functions_and_triggers(conn)
+
+            # Создание представлений
+            await self._create_views(conn)
+
             logger.info("Database tables initialized successfully")
 
     async def _create_indexes(self, conn):
@@ -221,6 +257,15 @@ class Database:
             "CREATE INDEX IF NOT EXISTS idx_user_rate_limits_user_id ON user_rate_limits(user_id)",
             "CREATE INDEX IF NOT EXISTS idx_support_metrics_date ON support_metrics(date)",
             "CREATE INDEX IF NOT EXISTS idx_feedback_category ON feedback(category)",
+            "CREATE INDEX IF NOT EXISTS idx_feedback_is_critical ON feedback(is_critical)",
+            "CREATE INDEX IF NOT EXISTS idx_feedback_status ON feedback(status)",
+            "CREATE INDEX IF NOT EXISTS idx_feedback_priority ON feedback(priority)",
+            "CREATE INDEX IF NOT EXISTS idx_feedback_rating ON feedback(rating)",
+            "CREATE INDEX IF NOT EXISTS idx_critical_actions_feedback_id ON critical_feedback_actions(feedback_id)",
+            "CREATE INDEX IF NOT EXISTS idx_critical_actions_admin_id ON critical_feedback_actions(admin_user_id)",
+            "CREATE INDEX IF NOT EXISTS idx_critical_actions_type ON critical_feedback_actions(action_type)",
+            "CREATE INDEX IF NOT EXISTS idx_notification_limits_type ON notification_rate_limits(notification_type)",
+            "CREATE INDEX IF NOT EXISTS idx_notification_limits_admin ON notification_rate_limits(admin_user_id)",
             "CREATE INDEX IF NOT EXISTS idx_schedule_day ON schedule(day)",
             "CREATE INDEX IF NOT EXISTS idx_usage_stats_action ON usage_stats(action)",
             "CREATE INDEX IF NOT EXISTS idx_usage_stats_created_at ON usage_stats(created_at)"
@@ -231,6 +276,105 @@ class Database:
                 await conn.execute(index_sql)
             except Exception as e:
                 logger.warning(f"Failed to create index: {e}")
+
+    async def _create_functions_and_triggers(self, conn):
+        """Создание функций и триггеров"""
+        try:
+            # Функция для автоматического определения критических отзывов
+            await conn.execute("""
+                CREATE OR REPLACE FUNCTION set_feedback_flags()
+                RETURNS TRIGGER AS $$
+                BEGIN
+                    -- Определяем критичность
+                    NEW.is_critical := (NEW.rating <= 2);
+                    
+                    -- Устанавливаем приоритет
+                    NEW.priority := CASE 
+                        WHEN NEW.rating = 1 THEN 'urgent'
+                        WHEN NEW.rating = 2 THEN 'high'
+                        WHEN NEW.rating = 3 THEN 'medium'
+                        ELSE 'normal'
+                    END;
+                    
+                    -- Устанавливаем статус
+                    NEW.status := CASE 
+                        WHEN NEW.rating <= 2 THEN 'requires_attention'
+                        ELSE 'new'
+                    END;
+                    
+                    RETURN NEW;
+                END;
+                $$ LANGUAGE plpgsql;
+            """)
+
+            # Создание триггера
+            await conn.execute("DROP TRIGGER IF EXISTS trigger_set_feedback_flags ON feedback")
+            await conn.execute("""
+                CREATE TRIGGER trigger_set_feedback_flags
+                    BEFORE INSERT ON feedback
+                    FOR EACH ROW
+                    EXECUTE FUNCTION set_feedback_flags();
+            """)
+
+            logger.info("Functions and triggers created successfully")
+        except Exception as e:
+            logger.warning(f"Failed to create functions and triggers: {e}")
+
+    async def _create_views(self, conn):
+        """Создание представлений"""
+        try:
+            # Представление для быстрого доступа к критическим отзывам
+            await conn.execute("""
+                CREATE OR REPLACE VIEW critical_feedback_view AS
+                SELECT 
+                    f.*,
+                    u.username,
+                    u.first_name,
+                    u.last_name,
+                    CASE 
+                        WHEN f.rating = 1 THEN '🚨 Критический'
+                        WHEN f.rating = 2 THEN '⚠️ Низкий'
+                        ELSE '✅ Нормальный'
+                    END as severity_label,
+                    EXTRACT(EPOCH FROM (NOW() - f.created_at))/3600 as hours_since_created,
+                    CASE 
+                        WHEN f.admin_response_at IS NOT NULL THEN 
+                            EXTRACT(EPOCH FROM (f.admin_response_at - f.created_at))/60 
+                        ELSE NULL 
+                    END as response_time_minutes
+                FROM feedback f
+                JOIN users u ON f.user_id = u.id
+                WHERE f.is_critical = TRUE
+                ORDER BY f.created_at DESC;
+            """)
+
+            # Представление для статистики критических отзывов
+            await conn.execute("""
+                CREATE OR REPLACE VIEW critical_feedback_stats AS
+                SELECT 
+                    DATE(created_at) as date,
+                    COUNT(*) as total_critical,
+                    COUNT(*) FILTER (WHERE rating = 1) as urgent_count,
+                    COUNT(*) FILTER (WHERE rating = 2) as high_priority_count,
+                    COUNT(*) FILTER (WHERE status = 'resolved') as resolved_count,
+                    COUNT(*) FILTER (WHERE admin_response_at IS NOT NULL) as responded_count,
+                    AVG(
+                        CASE 
+                            WHEN admin_response_at IS NOT NULL THEN 
+                                EXTRACT(EPOCH FROM (admin_response_at - created_at))/60 
+                            ELSE NULL 
+                        END
+                    ) as avg_response_time_minutes
+                FROM feedback
+                WHERE is_critical = TRUE
+                AND created_at > CURRENT_DATE - INTERVAL '30 days'
+                GROUP BY DATE(created_at)
+                ORDER BY date DESC;
+            """)
+
+            logger.info("Views created successfully")
+        except Exception as e:
+            logger.warning(f"Failed to create views: {e}")
 
     # Методы для работы с пользователями
     async def add_user(self, user_id: int, username: str = None,
@@ -684,41 +828,158 @@ class Database:
         """Получение тикетов поддержки (старый метод)"""
         return await self.search_tickets(status=status)
 
-    # Методы для отзывов
-    async def add_feedback(self, user_id: int, category: str,
-                           rating: int, comment: str = None):
-        """Добавление отзыва"""
+    # ================== МЕТОДЫ ДЛЯ ОТЗЫВОВ (ОБНОВЛЕНО) ==================
+
+    async def add_feedback(self, user_id: int, category: str, rating: int, comment: str = None) -> int:
+        """Добавление отзыва с автоматическим определением критичности"""
         async with self.get_connection() as conn:
-            await conn.execute("""
+            feedback_id = await conn.fetchval("""
                 INSERT INTO feedback (user_id, category, rating, comment)
                 VALUES ($1, $2, $3, $4)
+                RETURNING id
             """, user_id, category, rating, comment)
 
+            return feedback_id
+
     async def get_feedback_stats(self) -> Dict:
-        """Получение статистики отзывов"""
+        """Получение статистики отзывов включая критические"""
         async with self.get_connection() as conn:
+            # Общая статистика
             stats = await conn.fetchrow("""
                 SELECT 
                     COUNT(*) as total_feedback,
                     AVG(rating) as average_rating,
-                    COUNT(DISTINCT user_id) as unique_users
+                    COUNT(DISTINCT user_id) as unique_users,
+                    COUNT(*) FILTER (WHERE is_critical = TRUE) as critical_feedback,
+                    COUNT(*) FILTER (WHERE rating = 1) as very_negative,
+                    COUNT(*) FILTER (WHERE rating = 2) as negative,
+                    COUNT(*) FILTER (WHERE rating >= 4) as positive
                 FROM feedback
             """)
 
+            # Статистика по категориям
             category_stats = await conn.fetch("""
                 SELECT 
                     category,
                     COUNT(*) as count,
-                    AVG(rating) as avg_rating
+                    AVG(rating) as avg_rating,
+                    COUNT(*) FILTER (WHERE is_critical = TRUE) as critical_count,
+                    COUNT(*) FILTER (WHERE admin_response_at IS NOT NULL) as responded_count
                 FROM feedback
                 GROUP BY category
                 ORDER BY count DESC
             """)
 
+            # Критические отзывы за последнюю неделю
+            week_ago = datetime.now() - timedelta(days=7)
+            critical_recent = await conn.fetch("""
+                SELECT 
+                    DATE(created_at) as date,
+                    COUNT(*) as critical_count,
+                    AVG(rating) as avg_rating
+                FROM feedback
+                WHERE is_critical = TRUE AND created_at > $1
+                GROUP BY DATE(created_at)
+                ORDER BY date DESC
+            """, week_ago)
+
             return {
                 "total": dict(stats),
-                "by_category": [dict(row) for row in category_stats]
+                "by_category": [dict(row) for row in category_stats],
+                "critical_recent": [dict(row) for row in critical_recent]
             }
+
+    async def get_critical_feedback(self, limit: int = 50, unresponded_only: bool = False) -> List[Dict]:
+        """Получение критических отзывов"""
+        async with self.get_connection() as conn:
+            where_clause = "WHERE f.is_critical = TRUE"
+            if unresponded_only:
+                where_clause += " AND f.admin_response_at IS NULL"
+
+            rows = await conn.fetch(f"""
+                SELECT f.*, u.username, u.first_name, u.last_name,
+                       EXTRACT(EPOCH FROM (NOW() - f.created_at))/3600 as hours_since_created
+                FROM feedback f
+                JOIN users u ON f.user_id = u.id
+                {where_clause}
+                ORDER BY f.created_at DESC
+                LIMIT $1
+            """, limit)
+
+            return [dict(row) for row in rows]
+
+    async def mark_feedback_as_notified(self, feedback_id: int, admin_user_id: int = None):
+        """Отметка отзыва как уведомленного"""
+        async with self.get_connection() as conn:
+            await conn.execute("""
+                UPDATE feedback 
+                SET admin_notified = TRUE
+                WHERE id = $1
+            """, feedback_id)
+
+            # Логируем действие
+            if admin_user_id:
+                await conn.execute("""
+                    INSERT INTO critical_feedback_actions (feedback_id, admin_user_id, action_type, action_description)
+                    VALUES ($1, $2, 'notified', 'Admin notified about critical feedback')
+                """, feedback_id, admin_user_id)
+
+    async def add_admin_response_to_feedback(self, feedback_id: int, admin_user_id: int, response: str):
+        """Добавление ответа администратора на отзыв"""
+        async with self.get_connection() as conn:
+            await conn.execute("""
+                UPDATE feedback 
+                SET admin_response = $2, admin_response_at = CURRENT_TIMESTAMP, status = 'resolved'
+                WHERE id = $1
+            """, feedback_id, response)
+
+            # Логируем действие
+            await conn.execute("""
+                INSERT INTO critical_feedback_actions (feedback_id, admin_user_id, action_type, action_description)
+                VALUES ($1, $2, 'responded', $3)
+            """, feedback_id, admin_user_id, f"Admin response: {response[:100]}...")
+
+    async def check_notification_rate_limit(self, notification_type: str, admin_user_id: int, max_per_hour: int = 5) -> bool:
+        """Проверка лимита уведомлений для администратора"""
+        async with self.get_connection() as conn:
+            now = datetime.now()
+            hour_ago = now - timedelta(hours=1)
+
+            # Получаем или создаем запись о лимитах
+            rate_limit = await conn.fetchrow("""
+                SELECT * FROM notification_rate_limits 
+                WHERE notification_type = $1 AND admin_user_id = $2
+            """, notification_type, admin_user_id)
+
+            if not rate_limit:
+                # Создаем новую запись
+                await conn.execute("""
+                    INSERT INTO notification_rate_limits (notification_type, admin_user_id, notifications_sent)
+                    VALUES ($1, $2, 1)
+                """, notification_type, admin_user_id)
+                return True
+
+            # Проверяем, нужно ли сбросить счетчик
+            if now > rate_limit['reset_at']:
+                await conn.execute("""
+                    UPDATE notification_rate_limits 
+                    SET notifications_sent = 1, last_notification_at = $3, reset_at = $4
+                    WHERE notification_type = $1 AND admin_user_id = $2
+                """, notification_type, admin_user_id, now, now + timedelta(hours=1))
+                return True
+
+            # Проверяем лимит
+            if rate_limit['notifications_sent'] >= max_per_hour:
+                return False
+
+            # Увеличиваем счетчик
+            await conn.execute("""
+                UPDATE notification_rate_limits 
+                SET notifications_sent = notifications_sent + 1, last_notification_at = $3
+                WHERE notification_type = $1 AND admin_user_id = $2
+            """, notification_type, admin_user_id, now)
+
+            return True
 
     # Методы для расписания
     async def get_schedule_by_day(self, day: int) -> List[Dict]:
