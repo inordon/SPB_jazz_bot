@@ -15,9 +15,9 @@ from database import Database
 from handlers import BotHandlers
 from utils import EmailSender, DataBackup, HealthChecker
 
-# Настройка логирования БЕЗ ЭМОДЗИ
+# Настройка логирования
 def setup_logging():
-    """Настройка системы логирования без эмодзи"""
+    """Настройка системы логирования"""
     import pathlib
     pathlib.Path("logs").mkdir(exist_ok=True)
 
@@ -76,7 +76,7 @@ class WebServer:
             <meta charset="utf-8">
         </head>
         <body>
-            <h1>Festival Bot</h1>
+            <h1>🎵 Festival Bot</h1>
             <p>Бот для музыкального фестиваля работает!</p>
             <p>Время: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}</p>
             <ul>
@@ -250,18 +250,18 @@ class FestivalBot:
         from aiogram.types import BotCommand
 
         commands = [
-            BotCommand(command="start", description="Главное меню"),
-            BotCommand(command="menu", description="Показать меню"),
-            BotCommand(command="schedule", description="Расписание"),
-            BotCommand(command="navigation", description="Навигация"),
-            BotCommand(command="support", description="Поддержка"),
-            BotCommand(command="feedback", description="Обратная связь"),
+            BotCommand(command="start", description="🏠 Главное меню"),
+            BotCommand(command="menu", description="📋 Показать меню"),
+            BotCommand(command="schedule", description="📅 Расписание"),
+            BotCommand(command="navigation", description="🗺 Навигация"),
+            BotCommand(command="support", description="🆘 Поддержка"),
+            BotCommand(command="feedback", description="💭 Обратная связь"),
         ]
 
         admin_commands = commands + [
-            BotCommand(command="admin", description="Админ панель"),
-            BotCommand(command="stats", description="Статистика"),
-            BotCommand(command="health", description="Проверка здоровья"),
+            BotCommand(command="admin", description="🔧 Админ панель"),
+            BotCommand(command="stats", description="📊 Статистика"),
+            BotCommand(command="health", description="🏥 Проверка здоровья"),
         ]
 
         try:
@@ -416,16 +416,16 @@ class FestivalBot:
             # Запуск фоновых задач
             await self.start_background_tasks()
 
-            # Уведомление администраторов о запуске (БЕЗ ЭМОДЗИ)
+            # Уведомление администраторов о запуске
             startup_message = f"""
-BOT STARTED
+🚀 БОТ ЗАПУЩЕН
 
-Time: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
-Environment: {config.environment}
-Debug mode: {'Enabled' if config.debug_mode else 'Disabled'}
-Version: 2.0 (with support dialogs)
+⏰ Время: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
+🌍 Окружение: {config.environment}
+🔍 Режим отладки: {'Включен' if config.debug_mode else 'Отключен'}
+📊 Версия: 2.0 (с диалогами поддержки)
 
-All systems operational
+✅ Все системы работают нормально
             """
 
             for admin_id in config.ADMIN_IDS:
@@ -468,9 +468,9 @@ All systems operational
 
             if self.bot:
                 shutdown_message = f"""
-BOT STOPPED
+🛑 БОТ ОСТАНОВЛЕН
 
-Time: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
+⏰ Время: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
                 """
 
                 for admin_id in config.ADMIN_IDS:
@@ -548,12 +548,12 @@ async def main():
         logger.error(f"Fatal error: {e}")
         if bot.bot:
             error_message = f"""
-CRITICAL BOT ERROR
+💥 КРИТИЧЕСКАЯ ОШИБКА БОТА
 
-Time: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
-Error: {str(e)}
+⏰ Время: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
+❌ Ошибка: {str(e)}
 
-Immediate intervention required!
+🔧 Требуется срочное вмешательство!
             """
 
             for admin_id in config.ADMIN_IDS:
@@ -567,13 +567,13 @@ Immediate intervention required!
 
 if __name__ == "__main__":
     if sys.version_info < (3, 8):
-        print("Python 3.8+ is required")
+        print("❌ Python 3.8+ is required")
         sys.exit(1)
 
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\nBot stopped by user")
+        print("\n🛑 Bot stopped by user")
     except Exception as e:
-        print(f"Fatal error: {e}")
+        print(f"💥 Fatal error: {e}")
         sys.exit(1)

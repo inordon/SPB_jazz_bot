@@ -1,35 +1,264 @@
 # ====================================
-# МИНИМАЛЬНЫЙ .gitignore
+# .gitignore для Festival Bot
 # ====================================
 
-# Конфиденциальные файлы
+# Конфиденциальные файлы конфигурации
 .env
-.env.*
-!.env.example
+.env.local
+.env.production
+.env.staging
+.env.development
 
-# Логи и данные
+# Логи
 logs/
+*.log
+*.log.*
+
+# Резервные копии
+backups/
+*.sql
+*.json.backup
+
+# Данные и кэш
 data/
 cache/
-backups/
-*.log
+temp/
+tmp/
 
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Virtual environments
+.env
+.venv
+env/
 venv/
-.venv/
+ENV/
+env.bak/
+venv.bak/
+.virtualenv
 
-# IDE
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# PyCharm
 .idea/
-.vscode/
+*.iws
 *.iml
+*.ipr
 
-# OS
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Windows
 Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
 
 # Docker
+.dockerignore
 docker-compose.override.yml
-# Project exclude paths
-/.
+docker-compose.prod.yml
+
+# Файлы изображений (если большие)
+# images/*.jpg
+# images/*.png
+# images/*.gif
+# Раскомментируйте выше, если изображения большие и хранятся отдельно
+
+# SSL сертификаты
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Локальные файлы конфигурации Nginx
+nginx.conf.local
+ssl/
+
+# Мониторинг
+prometheus/data/
+grafana/data/
+
+# Переменные окружения IDE
+.env.idea
+.env.vscode
+
+# Файлы отладки
+debug.log
+error.log
+access.log
+
+# Временные файлы
+*.tmp
+*.temp
+*.pid
+
+# Файлы блокировки
+*.lock
+
+# Компилированные файлы Python
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Файлы настроек проектов
+.project
+.settings/
+.buildpath
+
+# Архивы
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Локальные переопределения Docker Compose
+docker-compose.local.yml
+docker-compose.dev.yml
+
+# Файлы с секретами
+secrets/
+credentials/
+keys/
+
+# Файлы состояния Terraform (если используется)
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Файлы Ansible (если используется)
+*.retry
+
+# Файлы мониторинга
+monitoring/prometheus/data/
+monitoring/grafana/data/
+
+# Рабочие файлы
+work/
+working/
+scratch/
+
+# Персональные заметки
+notes.md
+TODO.md
+PRIVATE.md
