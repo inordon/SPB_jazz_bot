@@ -24,7 +24,7 @@ RUN chmod +x scripts/*.sh
 RUN chmod +x health_check.py
 
 # Переменные окружения
-ENV PYTHONPATH=/app/src
+ENV PYTHONPATH=/src
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
