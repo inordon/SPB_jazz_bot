@@ -1,7 +1,7 @@
 import asyncio
 import logging
 import re
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton, FSInputFile
@@ -126,23 +126,23 @@ class BotHandlers:
             has_active_ticket = active_ticket is not None
 
             welcome_text = f"""
-🎵 Добро пожаловать на Музыкальный Фестиваль!
+Добро пожаловать на Музыкальный Фестиваль!
 
-Привет, {message.from_user.first_name}! 👋
+Привет, {message.from_user.first_name}!
 
 Этот бот поможет тебе:
-• 📅 Узнать расписание выступлений
-• 🗺 Найти нужные места на фестивале
-• 🎫 Получить информацию о билетах
-• 🎨 Записаться на мастер-классы
-• 🆘 Связаться с поддержкой
-• 💭 Оставить отзыв
+• Узнать расписание выступлений
+• Найти нужные места на фестивале
+• Получить информацию о билетах
+• Записаться на мастер-классы
+• Связаться с поддержкой
+• Оставить отзыв
 
-Выбери нужный раздел в меню ниже ⬇️
+Выбери нужный раздел в меню ниже
             """
 
             if has_active_ticket:
-                welcome_text += f"\n🔴 У вас есть активное обращение #{active_ticket['id']} в поддержку"
+                welcome_text += f"\n\nУ вас есть активное обращение #{active_ticket['id']} в поддержку"
 
             await message.answer(welcome_text, reply_markup=Keyboards.main_menu_with_support_indicator(has_active_ticket))
 
@@ -157,9 +157,9 @@ class BotHandlers:
     async def cmd_admin(self, message: Message):
         """Админ панель"""
         if message.from_user.id in config.ADMIN_IDS:
-            await message.answer("🔧 Админ панель", reply_markup=Keyboards.admin_menu())
+            await message.answer("Админ панель", reply_markup=Keyboards.admin_menu())
         else:
-            await message.answer("❌ У вас нет прав доступа к админ панели.")
+            await message.answer("У вас нет прав доступа к админ панели.")
 
     # Главное меню
     async def show_main_menu(self, query: CallbackQuery):
@@ -171,9 +171,9 @@ class BotHandlers:
         active_ticket = await self.db.get_user_active_ticket(query.from_user.id)
         has_active_ticket = active_ticket is not None
 
-        text = "🎵 Главное меню\n\nВыберите нужный раздел:"
+        text = "Главное меню\n\nВыберите нужный раздел:"
         if has_active_ticket:
-            text += f"\n\n🔴 У вас есть активное обращение #{active_ticket['id']} в поддержку"
+            text += f"\n\nУ вас есть активное обращение #{active_ticket['id']} в поддержку"
 
         await query.message.edit_text(text, reply_markup=Keyboards.main_menu_with_support_indicator(has_active_ticket))
         await query.answer()
@@ -187,9 +187,9 @@ class BotHandlers:
         active_ticket = await self.db.get_user_active_ticket(message.from_user.id)
         has_active_ticket = active_ticket is not None
 
-        text = "🎵 Главное меню\n\nВыберите нужный раздел:"
+        text = "Главное меню\n\nВыберите нужный раздел:"
         if has_active_ticket:
-            text += f"\n\n🔴 У вас есть активное обращение #{active_ticket['id']} в поддержку"
+            text += f"\n\nУ вас есть активное обращение #{active_ticket['id']} в поддержку"
 
         await message.answer(text, reply_markup=Keyboards.main_menu_with_support_indicator(has_active_ticket))
 
@@ -199,7 +199,7 @@ class BotHandlers:
         await self._log_user_action(query.from_user.id, "schedule_menu")
 
         text = """
-📅 Расписание фестиваля
+Расписание фестиваля
 
 Фестиваль проходит 5 дней.
 Выберите день для просмотра программы:
@@ -217,19 +217,19 @@ class BotHandlers:
             schedule = await self.db.get_schedule_by_day(day)
 
             if schedule:
-                text = f"📅 Расписание - День {day}\n\n"
+                text = f"Расписание - День {day}\n\n"
                 for item in schedule:
-                    text += f"🕐 {item['time'].strftime('%H:%M')} - {item['artist_name']}\n"
-                    text += f"🎪 Сцена: {item['stage']}\n"
+                    text += f"{item['time'].strftime('%H:%M')} - {item['artist_name']}\n"
+                    text += f"Сцена: {item['stage']}\n"
                     if item['description']:
-                        text += f"📝 {item['description']}\n"
+                        text += f"{item['description']}\n"
                     text += "\n"
             else:
-                text = f"📅 День {day}\n\nРасписание пока не опубликовано.\nСледите за обновлениями!"
+                text = f"День {day}\n\nРасписание пока не опубликовано.\nСледите за обновлениями!"
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="◀️ Назад", callback_data="schedule")],
-                [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+                [InlineKeyboardButton(text="Назад", callback_data="schedule")],
+                [InlineKeyboardButton(text="Главное меню", callback_data="main_menu")]
             ])
 
             await query.message.edit_text(text, reply_markup=keyboard)
@@ -245,7 +245,7 @@ class BotHandlers:
         await self._log_user_action(query.from_user.id, "navigation_menu")
 
         text = """
-🗺 Навигация по фестивалю
+Навигация по фестивалю
 
 Выберите, что вас интересует:
 • Общая карта фестиваля
@@ -266,9 +266,9 @@ class BotHandlers:
 
             # Клавиатура с маршрутом
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🗺 Построить маршрут", url=route_url)],
-                [InlineKeyboardButton(text="◀️ Назад к навигации", callback_data="navigation")],
-                [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+                [InlineKeyboardButton(text="Построить маршрут", url=route_url)],
+                [InlineKeyboardButton(text="Назад к навигации", callback_data="navigation")],
+                [InlineKeyboardButton(text="Главное меню", callback_data="main_menu")]
             ])
 
             # Отправка изображения карты
@@ -276,8 +276,8 @@ class BotHandlers:
                 map_image = FSInputFile(config.MAPS_IMAGES["festival_map"])
                 await query.message.answer_photo(
                     photo=map_image,
-                    caption="🗺 **Карта фестиваля**\n\n"
-                            "📍 Основные зоны:\n"
+                    caption="**Карта фестиваля**\n\n"
+                            "Основные зоны:\n"
                             "• Главная сцена - центр\n"
                             "• Малая сцена - север\n"
                             "• Фудкорт - восток\n"
@@ -291,8 +291,8 @@ class BotHandlers:
             except FileNotFoundError:
                 # Если файл карты не найден, отправляем текстовое описание
                 await query.message.edit_text(
-                    "🗺 **Карта фестиваля**\n\n"
-                    "📍 Основные зоны:\n"
+                    "**Карта фестиваля**\n\n"
+                    "Основные зоны:\n"
                     "• Главная сцена - центр территории\n"
                     "• Малая сцена - северная часть\n"
                     "• Фудкорт - восточная часть\n"
@@ -319,58 +319,58 @@ class BotHandlers:
         # Информация о локациях
         locations_info = {
             "foodcourt": {
-                "title": "🍕 Фудкорт",
+                "title": "Фудкорт",
                 "description": "Зона питания с различными кафе и ресторанами",
                 "details": [
-                    "🍕 Пицца и итальянская кухня",
-                    "🍔 Бургеры и фаст-фуд",
-                    "🥗 Здоровое питание",
-                    "☕ Кофе и напитки",
-                    "🍰 Десерты и выпечка"
+                    "Пицца и итальянская кухня",
+                    "Бургеры и фаст-фуд",
+                    "Здоровое питание",
+                    "Кофе и напитки",
+                    "Десерты и выпечка"
                 ]
             },
             "workshops": {
-                "title": "🎨 Зона мастер-классов",
+                "title": "Зона мастер-классов",
                 "description": "Образовательная зона с творческими мастер-классами",
                 "details": [
-                    "🎸 Музыкальные инструменты",
-                    "🎤 Вокальные техники",
-                    "💻 Создание музыки",
-                    "✍️ Написание песен",
-                    "🎧 Звукорежиссура"
+                    "Музыкальные инструменты",
+                    "Вокальные техники",
+                    "Создание музыки",
+                    "Написание песен",
+                    "Звукорежиссура"
                 ]
             },
             "souvenirs": {
-                "title": "🛍 Сувенирные магазины",
+                "title": "Сувенирные магазины",
                 "description": "Официальная сувенирная продукция фестиваля",
                 "details": [
-                    "👕 Футболки и толстовки",
-                    "🧢 Кепки и головные уборы",
-                    "🎸 Музыкальные аксессуары",
-                    "📀 Диски и винил",
-                    "🎁 Подарочные наборы"
+                    "Футболки и толстовки",
+                    "Кепки и головные уборы",
+                    "Музыкальные аксессуары",
+                    "Диски и винил",
+                    "Подарочные наборы"
                 ]
             },
             "toilets": {
-                "title": "🚻 Туалеты",
+                "title": "Туалеты",
                 "description": "Санитарные зоны на территории фестиваля",
                 "details": [
-                    "🚹 Мужские туалеты",
-                    "🚺 Женские туалеты",
-                    "♿ Для людей с ограниченными возможностями",
-                    "👶 Пеленальные комнаты",
-                    "🧼 Умывальники"
+                    "Мужские туалеты",
+                    "Женские туалеты",
+                    "Для людей с ограниченными возможностями",
+                    "Пеленальные комнаты",
+                    "Умывальники"
                 ]
             },
             "medical": {
-                "title": "🏥 Медицинские пункты",
+                "title": "Медицинские пункты",
                 "description": "Медицинская помощь и первая помощь",
                 "details": [
-                    "🩺 Врачи и медсестры",
-                    "💊 Базовые медикаменты",
-                    "🚑 Связь с скорой помощью",
-                    "📞 Экстренная связь: 112",
-                    "⚕️ Круглосуточно"
+                    "Врачи и медсестры",
+                    "Базовые медикаменты",
+                    "Связь с скорой помощью",
+                    "Экстренная связь: 112",
+                    "Круглосуточно"
                 ]
             }
         }
@@ -382,21 +382,21 @@ class BotHandlers:
 
         try:
             # Получение координат для маршрута
-            coords = config.LOCATIONS_COORDINATES.get(location, config.FESTIVAL_COORDINATES)
+            coords = config.SINGLE_LOCATIONS_COORDINATES.get(location, config.FESTIVAL_COORDINATES)
             route_url = config.get_yandex_route_url(coords)
 
             # Формирование текста
             details_text = "\n".join([f"• {detail}" for detail in location_info["details"]])
             caption_text = f"**{location_info['title']}**\n\n" \
                            f"{location_info['description']}\n\n" \
-                           f"📋 **Что здесь есть:**\n{details_text}\n\n" \
+                           f"**Что здесь есть:**\n{details_text}\n\n" \
                            f"Нажмите \"Построить маршрут\" для навигации"
 
             # Клавиатура с маршрутом
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🗺 Построить маршрут", url=route_url)],
-                [InlineKeyboardButton(text="◀️ Назад к навигации", callback_data="navigation")],
-                [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+                [InlineKeyboardButton(text="Построить маршрут", url=route_url)],
+                [InlineKeyboardButton(text="Назад к навигации", callback_data="navigation")],
+                [InlineKeyboardButton(text="Главное меню", callback_data="main_menu")]
             ])
 
             # Попытка отправить изображение
@@ -438,14 +438,14 @@ class BotHandlers:
         await self._log_user_action(query.from_user.id, "tickets_menu")
 
         text = """
-🎫 Билеты на фестиваль
+Билеты на фестиваль
 
 Доступны различные типы билетов:
 • Входной билет (1 день)
 • Семейный билет (5 человек)  
 • Абонементы (2, 3, 5 дней)
 
-💡 Все билеты включают:
+Все билеты включают:
 • Доступ ко всем сценам
 • Участие в мастер-классах
 • Доступ к зонам отдыха
@@ -462,12 +462,12 @@ class BotHandlers:
         await self._log_user_action(query.from_user.id, "activities_menu")
 
         text = """
-🎨 Активности фестиваля
+Активности фестиваля
 
 На фестивале доступны различные образовательные и творческие активности:
 
-🎨 **Мастер-классы** - практические творческие воркшопы
-🎓 **Лекторий** - теоретические лекции и семинары
+**Мастер-классы** - практические творческие воркшопы
+**Лекторий** - теоретические лекции и семинары
 
 Выберите интересующую активность:
         """
@@ -480,32 +480,32 @@ class BotHandlers:
         await self._log_user_action(query.from_user.id, "workshops_info")
 
         text = """
-🎨 Мастер-классы
+Мастер-классы
 
-📅 Расписание:
+Расписание:
 • 12:00-13:30 - "Основы игры на гитаре"
 • 14:00-15:30 - "Создание музыки на компьютере"
 • 16:00-17:30 - "Вокальная техника"
 • 18:00-19:30 - "Написание песен"
 
-📍 Локация: Белые шатры (западная зона)
+Локация: Белые шатры (западная зона)
 
-👥 Участники: до 20 человек в группе
-🎫 Стоимость: включено в билет
-📝 Запись: через администратора или в шатре
+Участники: до 20 человек в группе
+Стоимость: включено в билет
+Запись: через администратора или в шатре
 
-🎁 Каждый участник получает:
+Каждый участник получает:
 • Сертификат участника
 • Учебные материалы
 • Запись мастер-класса
 
-💡 Рекомендуем записаться заранее!
+Рекомендуем записаться заранее!
         """
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📝 Записаться", callback_data="workshop_register")],
-            [InlineKeyboardButton(text="◀️ Назад к активностям", callback_data="activities")],
-            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+            [InlineKeyboardButton(text="Записаться", callback_data="workshop_register")],
+            [InlineKeyboardButton(text="Назад к активностям", callback_data="activities")],
+            [InlineKeyboardButton(text="Главное меню", callback_data="main_menu")]
         ])
 
         await query.message.edit_text(text, reply_markup=keyboard)
@@ -516,41 +516,40 @@ class BotHandlers:
         await self._log_user_action(query.from_user.id, "lectures_info")
 
         text = """
-🎓 Лекторий
+Лекторий
 
-📅 Расписание лекций:
+Расписание лекций:
 • 10:00-11:00 - "История джаза: от истоков до наших дней"
 • 11:30-12:30 - "Музыкальная индустрия сегодня"
 • 13:00-14:00 - "Авторское право в музыке"
 • 15:00-16:00 - "Психология творчества"
 • 16:30-17:30 - "Продвижение музыканта в цифровую эпоху"
 
-📍 Локация: Лекционный зал (центральная зона)
+Локация: Лекционный зал (центральная зона)
 
-👥 Участники: до 100 человек
-🎫 Стоимость: включено в билет
-📝 Запись: не требуется, свободный вход
+Участники: до 100 человек
+Стоимость: включено в билет
+Запись: не требуется, свободный вход
 
-🎁 Дополнительно:
+Дополнительно:
 • Запись всех лекций
 • Презентации спикеров
 • Возможность задать вопросы
 • Networking с экспертами
 
-💡 Лекции проходят каждый день фестиваля!
+Лекции проходят каждый день фестиваля!
         """
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📋 Расписание всех лекций", callback_data="lectures_schedule")],
-            [InlineKeyboardButton(text="◀️ Назад к активностям", callback_data="activities")],
-            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+            [InlineKeyboardButton(text="Расписание всех лекций", callback_data="lectures_schedule")],
+            [InlineKeyboardButton(text="Назад к активностям", callback_data="activities")],
+            [InlineKeyboardButton(text="Главное меню", callback_data="main_menu")]
         ])
 
         await query.message.edit_text(text, reply_markup=keyboard)
         await query.answer()
 
-    # ================== ПОДДЕРЖКА V2 (С ДИАЛОГАМИ) ==================
-
+    # Поддержка
     async def start_support(self, query: CallbackQuery, state: FSMContext):
         """Начало процесса работы с поддержкой - проверяем активные тикеты"""
         await self._log_user_action(query.from_user.id, "support_start")
@@ -574,18 +573,18 @@ class BotHandlers:
         ticket_with_messages = await self.db.get_ticket_with_last_messages(ticket_id, 3)
 
         text = f"""
-💬 У вас есть активное обращение #{ticket_id}
+У вас есть активное обращение #{ticket_id}
 
-📅 Создано: {created_date}
-📧 Email: {ticket['email']}
-📝 Первое сообщение: {ticket['message'][:100]}{'...' if len(ticket['message']) > 100 else ''}
+Создано: {created_date}
+Email: {ticket['email']}
+Первое сообщение: {ticket['message'][:100]}{'...' if len(ticket['message']) > 100 else ''}
 
-💭 Последние сообщения:
+Последние сообщения:
         """
 
         if ticket_with_messages and ticket_with_messages.get('messages'):
             for msg in ticket_with_messages['messages'][-3:]:
-                sender = "🧑‍💼 Поддержка" if msg['is_staff'] else "👤 Вы"
+                sender = "Поддержка" if msg['is_staff'] else "Вы"
                 msg_text = msg['message_text'][:50] if msg['message_text'] else "[Медиа]"
                 msg_time = msg['created_at'].strftime('%H:%M')
                 text += f"\n{sender} ({msg_time}): {msg_text}{'...' if len(msg.get('message_text', '')) > 50 else ''}"
@@ -593,15 +592,15 @@ class BotHandlers:
         text += "\n\nВыберите действие:"
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="💬 Продолжить диалог",
+            [InlineKeyboardButton(text="Продолжить диалог",
                                   callback_data=f"continue_dialog_{ticket_id}")],
-            [InlineKeyboardButton(text="📝 История сообщений",
+            [InlineKeyboardButton(text="История сообщений",
                                   callback_data=f"show_history_{ticket_id}")],
-            [InlineKeyboardButton(text="✅ Закрыть обращение",
+            [InlineKeyboardButton(text="Закрыть обращение",
                                   callback_data=f"close_ticket_{ticket_id}")],
-            [InlineKeyboardButton(text="🆕 Новое обращение",
+            [InlineKeyboardButton(text="Новое обращение",
                                   callback_data="new_ticket")],
-            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+            [InlineKeyboardButton(text="Главное меню", callback_data="main_menu")]
         ])
 
         await query.message.edit_text(text, reply_markup=keyboard)
@@ -609,7 +608,7 @@ class BotHandlers:
     async def _start_new_ticket(self, query: CallbackQuery, state: FSMContext):
         """Начало создания нового тикета"""
         text = """
-🆘 Создание нового обращения
+Создание нового обращения
 
 Мы поможем решить любые вопросы!
 
@@ -639,7 +638,7 @@ class BotHandlers:
         await state.set_state(SupportStates.active_ticket_dialog)
 
         text = f"""
-💬 Диалог по обращению #{ticket_id}
+Диалог по обращению #{ticket_id}
 
 Напишите ваше сообщение. Вы можете отправить:
 • Текстовое сообщение
@@ -651,13 +650,13 @@ class BotHandlers:
         """
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📋 История сообщений",
+            [InlineKeyboardButton(text="История сообщений",
                                   callback_data=f"show_history_{ticket_id}")],
-            [InlineKeyboardButton(text="✅ Закрыть обращение",
+            [InlineKeyboardButton(text="Закрыть обращение",
                                   callback_data=f"close_ticket_{ticket_id}")],
-            [InlineKeyboardButton(text="◀️ Назад к тикету",
+            [InlineKeyboardButton(text="Назад к тикету",
                                   callback_data=f"back_to_ticket_{ticket_id}")],
-            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+            [InlineKeyboardButton(text="Главное меню", callback_data="main_menu")]
         ])
 
         await query.message.edit_text(text, reply_markup=keyboard)
@@ -674,7 +673,7 @@ class BotHandlers:
                 await query.answer("История сообщений пуста", show_alert=True)
                 return
 
-            text = f"📋 История обращения #{ticket_id}\n\n"
+            text = f"История обращения #{ticket_id}\n\n"
 
             for msg in messages[-10:]:  # Последние 10 сообщений
                 sender_icon = "🧑‍💼" if msg['is_staff'] else "👤"
@@ -694,11 +693,11 @@ class BotHandlers:
                 text += f"... и еще {len(messages) - 10} сообщений"
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="💬 Продолжить диалог",
+                [InlineKeyboardButton(text="Продолжить диалог",
                                       callback_data=f"continue_dialog_{ticket_id}")],
-                [InlineKeyboardButton(text="◀️ Назад к тикету",
+                [InlineKeyboardButton(text="Назад к тикету",
                                       callback_data=f"back_to_ticket_{ticket_id}")],
-                [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+                [InlineKeyboardButton(text="Главное меню", callback_data="main_menu")]
             ])
 
             await query.message.edit_text(text, reply_markup=keyboard)
@@ -712,7 +711,7 @@ class BotHandlers:
         ticket_id = int(query.data.split("_")[-1])
 
         text = f"""
-❓ Закрыть обращение #{ticket_id}?
+Закрыть обращение #{ticket_id}?
 
 После закрытия:
 • Диалог будет завершен
@@ -723,9 +722,9 @@ class BotHandlers:
         """
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="✅ Да, закрыть",
+            [InlineKeyboardButton(text="Да, закрыть",
                                   callback_data=f"confirm_close_{ticket_id}")],
-            [InlineKeyboardButton(text="❌ Отмена",
+            [InlineKeyboardButton(text="Отмена",
                                   callback_data=f"back_to_ticket_{ticket_id}")]
         ])
 
@@ -743,18 +742,18 @@ class BotHandlers:
                 await self._notify_support_ticket_closed(ticket_id, query.from_user)
 
                 text = f"""
-✅ Обращение #{ticket_id} закрыто
+Обращение #{ticket_id} закрыто
 
 Спасибо за обращение! 
 Если возникнут новые вопросы, создайте новое обращение.
 
-🌟 Оцените нашу работу в разделе "💭 Обратная связь"
+Оцените нашу работу в разделе "Обратная связь"
                 """
 
                 keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="🆕 Новое обращение", callback_data="new_ticket")],
-                    [InlineKeyboardButton(text="💭 Оставить отзыв", callback_data="feedback")],
-                    [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+                    [InlineKeyboardButton(text="Новое обращение", callback_data="new_ticket")],
+                    [InlineKeyboardButton(text="Оставить отзыв", callback_data="feedback")],
+                    [InlineKeyboardButton(text="Главное меню", callback_data="main_menu")]
                 ])
 
                 await query.message.edit_text(text, reply_markup=keyboard)
@@ -795,14 +794,14 @@ class BotHandlers:
         # Простая валидация email
         if "@" not in email or "." not in email:
             await message.answer(
-                "❌ Неверный формат email. Попробуйте еще раз:\n\nПример: your@email.com",
+                "Неверный формат email. Попробуйте еще раз:\n\nПример: your@email.com",
                 reply_markup=Keyboards.back_to_main()
             )
             return
 
         await state.update_data(email=email)
         await message.answer(
-            f"✅ Email сохранен: {email}\n\n"
+            f"Email сохранен: {email}\n\n"
             "Теперь опишите вашу проблему или задайте вопрос.\n"
             "Вы также можете прикрепить фотографию, документ или видео:",
             reply_markup=Keyboards.back_to_main()
@@ -844,15 +843,15 @@ class BotHandlers:
 
             # Отправляем подтверждение пользователю
             await message.answer(
-                f"✅ Ваше обращение #{ticket_id} принято!\n\n"
-                "⏱ Мы ответим в течение 2 часов.\n"
-                "📱 Ответ придет прямо в этот бот от Сотрудника Поддержки.\n"
-                "🔔 Включите уведомления, чтобы не пропустить ответ!\n\n"
-                "💬 Вы можете продолжать писать сообщения - они будут добавлены к этому обращению.",
+                f"Ваше обращение #{ticket_id} принято!\n\n"
+                "Мы ответим в течение 2 часов.\n"
+                "Ответ придет прямо в этот бот от Сотрудника Поддержки.\n"
+                "Включите уведомления, чтобы не пропустить ответ!\n\n"
+                "Вы можете продолжать писать сообщения - они будут добавлены к этому обращению.",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="💬 Продолжить диалог",
+                    [InlineKeyboardButton(text="Продолжить диалог",
                                           callback_data=f"continue_dialog_{ticket_id}")],
-                    [InlineKeyboardButton(text="✅ Завершить", callback_data="main_menu")]
+                    [InlineKeyboardButton(text="Завершить", callback_data="main_menu")]
                 ])
             )
 
@@ -863,7 +862,7 @@ class BotHandlers:
         except Exception as e:
             logger.error(f"Error processing support message: {e}")
             await message.answer(
-                "❌ Произошла ошибка при создании обращения. Попробуйте позже.",
+                "Произошла ошибка при создании обращения. Попробуйте позже.",
                 reply_markup=Keyboards.back_to_main()
             )
             await state.clear()
@@ -876,9 +875,9 @@ class BotHandlers:
             rate_check = await self.db.check_rate_limit(message.from_user.id)
             if not rate_check["can_send"]:
                 await message.answer(
-                    f"⏳ {rate_check['reason']}\n\nПопробуйте через {rate_check['wait_seconds']} секунд.",
+                    f"{rate_check['reason']}\n\nПопробуйте через {rate_check['wait_seconds']} секунд.",
                     reply_markup=InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+                        [InlineKeyboardButton(text="Главное меню", callback_data="main_menu")]
                     ])
                 )
                 return
@@ -918,17 +917,17 @@ class BotHandlers:
 
             # Подтверждение пользователю
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="📋 История сообщений",
+                [InlineKeyboardButton(text="История сообщений",
                                       callback_data=f"show_history_{ticket_id}")],
-                [InlineKeyboardButton(text="✅ Закрыть обращение",
+                [InlineKeyboardButton(text="Закрыть обращение",
                                       callback_data=f"close_ticket_{ticket_id}")],
-                [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+                [InlineKeyboardButton(text="Главное меню", callback_data="main_menu")]
             ])
 
             await message.answer(
-                f"✅ Сообщение отправлено команде поддержки!\n\n"
-                f"💬 Обращение #{ticket_id} остается активным.\n"
-                f"📱 Ответ придет в этот бот от Сотрудника Поддержки.\n\n"
+                f"Сообщение отправлено команде поддержки!\n\n"
+                f"Обращение #{ticket_id} остается активным.\n"
+                f"Ответ придет в этот бот от Сотрудника Поддержки.\n\n"
                 f"Можете продолжать писать сообщения в этом диалоге.",
                 reply_markup=keyboard
             )
@@ -936,7 +935,7 @@ class BotHandlers:
         except Exception as e:
             logger.error(f"Error processing dialog message: {e}")
             await message.answer(
-                "❌ Произошла ошибка при отправке сообщения. Попробуйте позже.",
+                "Произошла ошибка при отправке сообщения. Попробуйте позже.",
                 reply_markup=Keyboards.back_to_main()
             )
 
@@ -954,15 +953,15 @@ class BotHandlers:
 
             user = message.from_user
             support_text = f"""
-💬 СООБЩЕНИЕ В ДИАЛОГЕ #{ticket_id}
+СООБЩЕНИЕ В ДИАЛОГЕ #{ticket_id}
 
-👤 От: {user.first_name} {user.last_name or ''}
-⏰ Время: {datetime.now().strftime('%d.%m.%Y %H:%M')}
+От: {user.first_name} {user.last_name or ''}
+Время: {datetime.now().strftime('%d.%m.%Y %H:%M')}
 
-💬 Сообщение:
+Сообщение:
 {message_text}
 
-📝 Ответьте в этом треде для продолжения диалога
+Ответьте в этом треде для продолжения диалога
             """
 
             # Отправляем в тред (если есть) или в общий чат
@@ -1019,35 +1018,34 @@ class BotHandlers:
             user = message.from_user
             media_info = ""
             if photo_file_id:
-                media_info = "📷 + Фотография"
+                media_info = "+ Фотография"
             elif document_file_id:
-                media_info = "📄 + Документ"
+                media_info = "+ Документ"
             elif video_file_id:
-                media_info = "🎥 + Видео"
+                media_info = "+ Видео"
 
             support_text = f"""
-🆘 НОВОЕ ОБРАЩЕНИЕ #{ticket_id}
+НОВОЕ ОБРАЩЕНИЕ #{ticket_id}
 
-👤 Пользователь: {user.first_name} {user.last_name or ''}
-📧 Email: {email}
-🆔 User ID: {user.id}
-👤 Username: @{user.username or 'не указан'}
+Пользователь: {user.first_name} {user.last_name or ''}
+Email: {email}
+User ID: {user.id}
+Username: @{user.username or 'не указан'}
 
-💬 Сообщение:
+Сообщение:
 {message_text}
 
 {media_info}
 
-⏰ Время: {datetime.now().strftime('%d.%m.%Y %H:%M')}
+Время: {datetime.now().strftime('%d.%m.%Y %H:%M')}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📝 ИНСТРУКЦИЯ ДЛЯ СОТРУДНИКОВ:
+ИНСТРУКЦИЯ ДЛЯ СОТРУДНИКОВ:
 • Отвечайте в этом треде - ответы автоматически дойдут до пользователя
 • Пользователь увидит ответ от "Сотрудника Поддержки" (анонимно)
 • Диалог будет активным до закрытия тикета пользователем
 • Все сообщения сохраняются в истории для анализа
 
-⚠️ ПРАВА НА ОТВЕТ: только администраторы и сотрудники поддержки
+ПРАВА НА ОТВЕТ: только администраторы и сотрудники поддержки
             """
 
             # Отправка сообщения в группу
@@ -1090,24 +1088,23 @@ class BotHandlers:
 
                     # Отправляем детальную информацию в тред
                     detailed_info = f"""
-📋 ДЕТАЛЬНАЯ ИНФОРМАЦИЯ О ТИКЕТЕ #{ticket_id}
+ДЕТАЛЬНАЯ ИНФОРМАЦИЯ О ТИКЕТЕ #{ticket_id}
 
-👤 ПОЛЬЗОВАТЕЛЬ:
+ПОЛЬЗОВАТЕЛЬ:
 • Имя: {user.first_name} {user.last_name or ''}
 • Username: @{user.username or 'не указан'}
 • ID: {user.id}
 • Email: {email}
 
-💬 ПЕРВОЕ СООБЩЕНИЕ:
+ПЕРВОЕ СООБЩЕНИЕ:
 {message_text}
 
-⏰ Создано: {datetime.now().strftime('%d.%m.%Y %H:%M')}
+Создано: {datetime.now().strftime('%d.%m.%Y %H:%M')}
 
-📊 СТАТУС: Новый тикет, ожидает ответа
-🎯 ПРИОРИТЕТ: Обычный (ответить в течение 2 часов)
+СТАТУС: Новый тикет, ожидает ответа
+ПРИОРИТЕТ: Обычный (ответить в течение 2 часов)
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💬 НАЧИНАЙТЕ ДИАЛОГ - отвечайте в этом треде
+НАЧИНАЙТЕ ДИАЛОГ - отвечайте в этом треде
                     """
 
                     thread_message = None
@@ -1184,12 +1181,12 @@ class BotHandlers:
 
             if not ticket:
                 logger.warning(f"Ticket not found for message from user {user_id}")
-                await message.reply("❌ Не удалось найти тикет для ответа")
+                await message.reply("Не удалось найти тикет для ответа")
                 return
 
             # Проверяем, что тикет не закрыт
             if ticket.get('is_closed'):
-                await message.reply(f"⚠️ Тикет #{ticket['id']} уже закрыт")
+                await message.reply(f"Тикет #{ticket['id']} уже закрыт")
                 return
 
             # Определяем роль отвечающего для отображения пользователю
@@ -1221,19 +1218,18 @@ class BotHandlers:
 
             # Формируем ответ для пользователя (без реального имени сотрудника)
             response_for_user = f"""
-🆘 Ответ по обращению #{ticket['id']}
+Ответ по обращению #{ticket['id']}
 
 {role_emoji} От: {sender_role}
-⏰ Время: {datetime.now().strftime('%d.%m.%Y %H:%M')}
+Время: {datetime.now().strftime('%d.%m.%Y %H:%M')}
 
-💬 Ответ:
+Ответ:
 {response_text}
 
-───────────────────────
-💬 Вы можете продолжить диалог - просто напишите сообщение в боте
-✅ Для закрытия обращения используйте: /start → 🆘 Поддержка → Закрыть обращение
+Вы можете продолжить диалог - просто напишите сообщение в боте
+Для закрытия обращения используйте: /start → Поддержка → Закрыть обращение
 
-💡 Оцените нашу работу: /start → 💭 Обратная связь
+Оцените нашу работу: /start → Обратная связь
             """
 
             # Отправляем ответ пользователю в бот
@@ -1265,16 +1261,16 @@ class BotHandlers:
                 # Подтверждение в треде с дополнительной информацией
                 real_name = message.from_user.first_name or "Пользователь"
                 confirm_text = f"""
-✅ Ответ отправлен пользователю
+Ответ отправлен пользователю
 
-👤 Пользователь: {ticket['first_name']} (ID: {ticket['user_id']})
-📝 От: {real_name} ({sender_role})
-📱 Пользователь увидит ответ от "{sender_role}"
+Пользователь: {ticket['first_name']} (ID: {ticket['user_id']})
+От: {real_name} ({sender_role})
+Пользователь увидит ответ от "{sender_role}"
 
-💬 Диалог остается активным - пользователь может продолжить переписку
-📊 Ответ засчитан в статистику поддержки
+Диалог остается активным - пользователь может продолжить переписку
+Ответ засчитан в статистику поддержки
 
-🔧 Доступные команды:
+Доступные команды:
 • Отвечайте в этом треде для продолжения диалога
 • Пользователь может закрыть тикет самостоятельно
                 """
@@ -1299,21 +1295,21 @@ class BotHandlers:
 
                 # Детальная ошибка в треде
                 error_message = f"""
-❌ Не удалось отправить ответ пользователю
+Не удалось отправить ответ пользователю
 
-👤 Пользователь: {ticket['first_name']} {ticket['last_name'] or ''}
-🆔 User ID: {ticket['user_id']}
-📧 Email: {ticket['email']}
-❌ Ошибка: {str(e)}
+Пользователь: {ticket['first_name']} {ticket['last_name'] or ''}
+User ID: {ticket['user_id']}
+Email: {ticket['email']}
+Ошибка: {str(e)}
 
-💡 Возможные причины:
+Возможные причины:
 • Пользователь заблокировал бота
 • Пользователь удалил аккаунт  
 • Технические проблемы
 
-📧 Рекомендуется связаться по email: {ticket['email']}
+Рекомендуется связаться по email: {ticket['email']}
 
-🔧 Тикет остается активным - можно попробовать связаться позже
+Тикет остается активным - можно попробовать связаться позже
                 """
 
                 await message.reply(error_message)
@@ -1321,9 +1317,9 @@ class BotHandlers:
         except Exception as e:
             logger.error(f"Error handling support response: {e}")
             await message.reply(
-                f"❌ Ошибка при обработке ответа\n"
-                f"📝 Детали: {str(e)}\n"
-                f"🔧 Обратитесь к администратору"
+                f"Ошибка при обработке ответа\n"
+                f"Детали: {str(e)}\n"
+                f"Обратитесь к администратору"
             )
 
     async def _notify_support_ticket_closed(self, ticket_id: int, user):
@@ -1333,13 +1329,13 @@ class BotHandlers:
 
         try:
             notification_text = f"""
-✅ ТИКЕТ #{ticket_id} ЗАКРЫТ
+ТИКЕТ #{ticket_id} ЗАКРЫТ
 
-👤 Пользователь: {user.first_name} {user.last_name or ''}
-🆔 User ID: {user.id}
-⏰ Время закрытия: {datetime.now().strftime('%d.%m.%Y %H:%M')}
+Пользователь: {user.first_name} {user.last_name or ''}
+User ID: {user.id}
+Время закрытия: {datetime.now().strftime('%d.%m.%Y %H:%M')}
 
-📊 Тикет закрыт пользователем
+Тикет закрыт пользователем
             """
 
             # Получаем тикет для thread_id
@@ -1358,14 +1354,13 @@ class BotHandlers:
         except Exception as e:
             logger.error(f"Failed to notify support about ticket closure: {e}")
 
-    # ================== ОБРАТНАЯ СВЯЗЬ (ОБНОВЛЕНО) ==================
-
+    # Обратная связь
     async def start_feedback(self, query: CallbackQuery, state: FSMContext):
         """Начало процесса оставления отзыва"""
         await self._log_user_action(query.from_user.id, "feedback_start")
 
         text = """
-💭 Обратная связь
+Обратная связь
 
 Ваше мнение очень важно для нас!
 
@@ -1393,7 +1388,7 @@ class BotHandlers:
         await state.update_data(category=category, category_name=category_name)
 
         text = f"""
-💭 Оценка: {category_name}
+Оценка: {category_name}
 
 Поставьте оценку от 1 до 5 звезд:
         """
@@ -1416,18 +1411,18 @@ class BotHandlers:
         # Разные сообщения в зависимости от оценки
         if rating <= 2:
             text = f"""
-💭 Оценка: {category_name}
-🌟 Ваша оценка: {stars} ({rating}/5)
+Оценка: {category_name}
+Ваша оценка: {stars} ({rating}/5)
 
-😔 Нам очень жаль, что у вас остались негативные впечатления.
+Нам очень жаль, что у вас остались негативные впечатления.
 
 Пожалуйста, расскажите подробнее, что пошло не так?
 Ваш комментарий поможет нам исправить ситуацию:
             """
         elif rating == 3:
             text = f"""
-💭 Оценка: {category_name}
-🌟 Ваша оценка: {stars} ({rating}/5)
+Оценка: {category_name}
+Ваша оценка: {stars} ({rating}/5)
 
 Спасибо за честную оценку! 
 
@@ -1435,18 +1430,18 @@ class BotHandlers:
             """
         else:  # rating >= 4
             text = f"""
-💭 Оценка: {category_name}
-🌟 Ваша оценка: {stars} ({rating}/5)
+Оценка: {category_name}
+Ваша оценка: {stars} ({rating}/5)
 
-🎉 Спасибо за высокую оценку!
+Спасибо за высокую оценку!
 
 Поделитесь, что вам особенно понравилось (необязательно):
             """
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="➡️ Пропустить комментарий",
+            [InlineKeyboardButton(text="Пропустить комментарий",
                                   callback_data="skip_comment")],
-            [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
+            [InlineKeyboardButton(text="Главное меню", callback_data="main_menu")]
         ])
 
         await query.message.edit_text(text, reply_markup=keyboard)
@@ -1481,7 +1476,7 @@ class BotHandlers:
                 "is_critical": rating <= 2
             })
 
-            # 🚨 КРИТИЧЕСКИЕ ОТЗЫВЫ (рейтинг 1-2)
+            # Критические отзывы (рейтинг 1-2)
             if rating <= 2:
                 await self._handle_critical_feedback(user, category, category_name, rating, comment)
 
@@ -1502,7 +1497,7 @@ class BotHandlers:
 
         except Exception as e:
             logger.error(f"Error saving feedback: {e}")
-            error_text = "❌ Произошла ошибка при сохранении отзыва. Попробуйте позже."
+            error_text = "Произошла ошибка при сохранении отзыва. Попробуйте позже."
 
             if hasattr(message_or_query, 'answer'):
                 await message_or_query.answer(error_text, reply_markup=Keyboards.back_to_main())
@@ -1517,11 +1512,11 @@ class BotHandlers:
         try:
             # Определяем уровень критичности
             if rating == 1:
-                severity = "🔴 КРИТИЧЕСКИЙ"
+                severity = "КРИТИЧЕСКИЙ"
                 priority = "ВЫСОКИЙ"
                 emoji = "🚨"
             else:  # rating == 2
-                severity = "🟡 НИЗКИЙ"
+                severity = "НИЗКИЙ"
                 priority = "СРЕДНИЙ"
                 emoji = "⚠️"
 
@@ -1529,22 +1524,21 @@ class BotHandlers:
             critical_message = f"""
 {emoji} {severity} ОТЗЫВ
 
-📊 Категория: {category_name}
-🌟 Оценка: {"⭐" * rating} ({rating}/5)
-⚡ Приоритет: {priority}
+Категория: {category_name}
+Оценка: {"⭐" * rating} ({rating}/5)
+Приоритет: {priority}
 
-👤 От пользователя:
+От пользователя:
 • Имя: {user.first_name} {user.last_name or ''}
 • Username: @{user.username or 'не указан'}
 • ID: {user.id}
 
-💬 Комментарий:
+Комментарий:
 {comment or "Без комментария"}
 
-⏰ Время: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
+Время: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 РЕКОМЕНДУЕМЫЕ ДЕЙСТВИЯ:
+РЕКОМЕНДУЕМЫЕ ДЕЙСТВИЯ:
 """
 
             # Добавляем рекомендации в зависимости от категории
@@ -1553,12 +1547,12 @@ class BotHandlers:
 
             critical_message += f"""
 
-📞 КОНТАКТ С ПОЛЬЗОВАТЕЛЕМ:
+КОНТАКТ С ПОЛЬЗОВАТЕЛЕМ:
 • Telegram: @{user.username or 'нет username'}
 • ID для связи: {user.id}
 • Создать тикет поддержки для пользователя?
 
-💡 Этот отзыв требует оперативного внимания!
+Этот отзыв требует оперативного внимания!
             """
 
             # Отправляем уведомления всем администраторам
@@ -1575,12 +1569,12 @@ class BotHandlers:
                     group_message = f"""
 {emoji} КРИТИЧЕСКИЙ ОТЗЫВ ТРЕБУЕТ ВНИМАНИЯ
 
-📊 {category_name}: {"⭐" * rating} ({rating}/5)
-👤 {user.first_name} (@{user.username or 'нет username'})
+{category_name}: {"⭐" * rating} ({rating}/5)
+{user.first_name} (@{user.username or 'нет username'})
 
-💬 "{comment or 'Без комментария'}"
+"{comment or 'Без комментария'}"
 
-🎯 Кто-то может связаться с пользователем для решения проблемы?
+Кто-то может связаться с пользователем для решения проблемы?
                     """
 
                     await self.bot.send_message(config.SUPPORT_GROUP_ID, group_message)
@@ -1641,7 +1635,7 @@ class BotHandlers:
         # Для особо критических отзывов (рейтинг 1)
         if rating == 1:
             recommendations.extend([
-                "🚨 СРОЧНО: Принять немедленные меры",
+                "СРОЧНО: Принять немедленные меры",
                 "Рассмотреть возможность компенсации",
                 "Публично ответить на критику (если это оправдано)"
             ])
@@ -1663,16 +1657,16 @@ class BotHandlers:
                 rating_indicator = " ✨"
 
             feedback_text = f"""
-💭 НОВЫЙ ОТЗЫВ{rating_indicator}
+НОВЫЙ ОТЗЫВ{rating_indicator}
 
-📊 Категория: {category_name}
-🌟 Оценка: {stars} ({rating}/5)
-👤 От: {user.first_name}
+Категория: {category_name}
+Оценка: {stars} ({rating}/5)
+От: {user.first_name}
 
-💬 Комментарий:
+Комментарий:
 {comment or 'Без комментария'}
 
-⏰ {datetime.now().strftime('%d.%m.%Y %H:%M')}
+{datetime.now().strftime('%d.%m.%Y %H:%M')}
             """
 
             await self.bot.send_message(config.FEEDBACK_CHANNEL_ID, feedback_text)
@@ -1687,53 +1681,53 @@ class BotHandlers:
 
         if rating <= 2:
             response = f"""
-😔 Спасибо за честный отзыв
+Спасибо за честный отзыв
 
-📊 Категория: {category_name}
-🌟 Оценка: {stars} ({rating}/5)
-💬 Комментарий: {"Добавлен" if comment else "Не добавлен"}
+Категория: {category_name}
+Оценка: {stars} ({rating}/5)
+Комментарий: {"Добавлен" if comment else "Не добавлен"}
 
 Мы очень сожалеем о негативном опыте и обязательно разберемся с ситуацией.
 
-🔧 Наши администраторы уже уведомлены о проблеме.
-📞 Если нужна срочная помощь, обратитесь в поддержку: /start → 🆘 Поддержка
+Наши администраторы уже уведомлены о проблеме.
+Если нужна срочная помощь, обратитесь в поддержку: /start → Поддержка
 
-💙 Мы ценим ваше мнение и работаем над улучшениями!
+Мы ценим ваше мнение и работаем над улучшениями!
             """
         elif rating == 3:
             response = f"""
-🤔 Спасибо за честную оценку
+Спасибо за честную оценку
 
-📊 Категория: {category_name}
-🌟 Оценка: {stars} ({rating}/5)
-💬 Комментарий: {"Добавлен" if comment else "Не добавлен"}
+Категория: {category_name}
+Оценка: {stars} ({rating}/5)
+Комментарий: {"Добавлен" if comment else "Не добавлен"}
 
 Ваше мнение поможет нам стать лучше!
 
-💡 Если есть конкретные предложения по улучшению, напишите в поддержку.
+Если есть конкретные предложения по улучшению, напишите в поддержку.
             """
         else:  # rating >= 4
             response = f"""
-🎉 Спасибо за отличный отзыв!
+Спасибо за отличный отзыв!
 
-📊 Категория: {category_name}
-🌟 Оценка: {stars} ({rating}/5)
-💬 Комментарий: {"Добавлен" if comment else "Не добавлен"}
+Категория: {category_name}
+Оценка: {stars} ({rating}/5)
+Комментарий: {"Добавлен" if comment else "Не добавлен"}
 
 Мы рады, что вам понравилось! 
 
-🌟 Поделитесь впечатлениями с друзьями в наших соцсетях!
+Поделитесь впечатлениями с друзьями в наших соцсетях!
             """
 
         return response
-    # ================== СОЦИАЛЬНЫЕ СЕТИ ==================
 
+    # Социальные сети
     async def show_social_networks(self, query: CallbackQuery):
         """Показ социальных сетей"""
         await self._log_user_action(query.from_user.id, "social_networks")
 
         text = """
-📱 Социальные сети фестиваля
+Социальные сети фестиваля
 
 Подписывайтесь на наши аккаунты:
 • Новости и анонсы
@@ -1747,12 +1741,11 @@ class BotHandlers:
         await query.message.edit_text(text, reply_markup=Keyboards.social_networks())
         await query.answer()
 
-    # ================== АДМИН ФУНКЦИИ ==================
-
+    # Админ функции
     async def handle_admin_actions(self, query: CallbackQuery):
         """Обработка админских действий"""
         if query.from_user.id not in config.ADMIN_IDS:
-            await query.answer("❌ Недостаточно прав", show_alert=True)
+            await query.answer("Недостаточно прав", show_alert=True)
             return
 
         action = query.data.replace("admin_", "")
@@ -1785,44 +1778,43 @@ class BotHandlers:
             urgent_tickets = await self.db.get_tickets_requiring_attention()
 
             text = f"""
-🎛 ПАНЕЛЬ УПРАВЛЕНИЯ ПОДДЕРЖКОЙ
+ПАНЕЛЬ УПРАВЛЕНИЯ ПОДДЕРЖКОЙ
 
-📊 ОСНОВНЫЕ МЕТРИКИ:
-━━━━━━━━━━━━━━━━━━━━━━━
-📋 Всего тикетов: {stats['tickets']['total']}
-🔄 Открытых: {stats['tickets']['open']}
-✅ Закрытых: {stats['tickets']['closed']}
+ОСНОВНЫЕ МЕТРИКИ:
+Всего тикетов: {stats['tickets']['total']}
+Открытых: {stats['tickets']['open']}
+Закрытых: {stats['tickets']['closed']}
 
-📅 ЗА СЕГОДНЯ:
+ЗА СЕГОДНЯ:
 • Новых тикетов: {stats['tickets']['today']}
 • Сообщений: {stats['messages']['today']}
 
-📈 ЗА НЕДЕЛЮ:
+ЗА НЕДЕЛЮ:
 • Тикетов: {stats['tickets']['this_week']}
 • Сообщений от пользователей: {stats['messages']['from_users']}
 • Ответов сотрудников: {stats['messages']['from_staff']}
 
-⏱ ВРЕМЯ ОТВЕТА:
+ВРЕМЯ ОТВЕТА:
 • Среднее: {stats['response_time']['average_minutes']:.1f} мин
 • В часах: {stats['response_time']['average_hours']:.1f} ч
 
-🚨 ТРЕБУЮТ ВНИМАНИЯ: {len(urgent_tickets)} тикетов
+ТРЕБУЮТ ВНИМАНИЯ: {len(urgent_tickets)} тикетов
             """
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🚨 Срочные тикеты",
+                [InlineKeyboardButton(text="Срочные тикеты",
                                       callback_data="admin_urgent_tickets")],
-                [InlineKeyboardButton(text="📊 Подробная статистика",
+                [InlineKeyboardButton(text="Подробная статистика",
                                       callback_data="admin_detailed_stats")],
-                [InlineKeyboardButton(text="👥 Активность сотрудников",
+                [InlineKeyboardButton(text="Активность сотрудников",
                                       callback_data="admin_staff_activity")],
-                [InlineKeyboardButton(text="📈 Метрики по дням",
+                [InlineKeyboardButton(text="Метрики по дням",
                                       callback_data="admin_daily_metrics")],
-                [InlineKeyboardButton(text="📋 Все открытые тикеты",
+                [InlineKeyboardButton(text="Все открытые тикеты",
                                       callback_data="admin_open_tickets")],
-                [InlineKeyboardButton(text="🔄 Обновить",
+                [InlineKeyboardButton(text="Обновить",
                                       callback_data="admin_support_dashboard")],
-                [InlineKeyboardButton(text="◀️ Назад", callback_data="admin_menu")]
+                [InlineKeyboardButton(text="Назад", callback_data="admin_menu")]
             ])
 
             await query.message.edit_text(text, reply_markup=keyboard)
@@ -1837,23 +1829,23 @@ class BotHandlers:
             urgent_tickets = await self.db.get_tickets_requiring_attention()
 
             if not urgent_tickets:
-                text = "✅ Нет тикетов, требующих срочного внимания!"
+                text = "Нет тикетов, требующих срочного внимания!"
             else:
-                text = f"🚨 СРОЧНЫЕ ТИКЕТЫ ({len(urgent_tickets)})\n\n"
+                text = f"СРОЧНЫЕ ТИКЕТЫ ({len(urgent_tickets)})\n\n"
 
                 for ticket in urgent_tickets[:10]:  # Показываем первые 10
                     hours = int(ticket['hours_since_last_message'])
-                    text += f"🔥 #{ticket['id']} - {ticket['first_name']}\n"
-                    text += f"⏰ Без ответа: {hours} ч\n"
-                    text += f"📧 {ticket['email']}\n"
-                    text += f"💬 {ticket['message'][:60]}...\n\n"
+                    text += f"#{ticket['id']} - {ticket['first_name']}\n"
+                    text += f"Без ответа: {hours} ч\n"
+                    text += f"{ticket['email']}\n"
+                    text += f"{ticket['message'][:60]}...\n\n"
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🔄 Обновить",
+                [InlineKeyboardButton(text="Обновить",
                                       callback_data="admin_urgent_tickets")],
-                [InlineKeyboardButton(text="📋 Все открытые тикеты",
+                [InlineKeyboardButton(text="Все открытые тикеты",
                                       callback_data="admin_open_tickets")],
-                [InlineKeyboardButton(text="◀️ Назад",
+                [InlineKeyboardButton(text="Назад",
                                       callback_data="admin_support_dashboard")]
             ])
 
@@ -1869,10 +1861,9 @@ class BotHandlers:
             stats = await self.db.get_support_statistics()
 
             text = f"""
-📊 ПОДРОБНАЯ СТАТИСТИКА ПОДДЕРЖКИ
+ПОДРОБНАЯ СТАТИСТИКА ПОДДЕРЖКИ
 
-📋 ТИКЕТЫ:
-━━━━━━━━━━━━━━━━━━━━━━━
+ТИКЕТЫ:
 • Всего: {stats['tickets']['total']}
 • Открытых: {stats['tickets']['open']}
 • Закрытых: {stats['tickets']['closed']}
@@ -1880,8 +1871,7 @@ class BotHandlers:
 • За неделю: {stats['tickets']['this_week']}
 • За месяц: {stats['tickets']['this_month']}
 
-💬 СООБЩЕНИЯ:
-━━━━━━━━━━━━━━━━━━━━━━━
+СООБЩЕНИЯ:
 • Всего: {stats['messages']['total']}
 • От пользователей: {stats['messages']['from_users']}
 • От сотрудников: {stats['messages']['from_staff']}
@@ -1889,12 +1879,11 @@ class BotHandlers:
 • За неделю: {stats['messages']['this_week']}
 • За месяц: {stats['messages']['this_month']}
 
-⏱ ВРЕМЯ ОТВЕТА:
-━━━━━━━━━━━━━━━━━━━━━━━
+ВРЕМЯ ОТВЕТА:
 • Среднее: {stats['response_time']['average_minutes']:.1f} мин
 • В часах: {stats['response_time']['average_hours']:.1f} ч
 
-👑 ТОП-5 АКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ:
+ТОП-5 АКТИВНЫХ ПОЛЬЗОВАТЕЛЕЙ:
             """
 
             for i, user in enumerate(stats['top_users'][:5], 1):
@@ -1902,13 +1891,13 @@ class BotHandlers:
                 text += f"{i}. {user['first_name']} ({username}): {user['message_count']} сообщений\n"
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="👥 Активность сотрудников",
+                [InlineKeyboardButton(text="Активность сотрудников",
                                       callback_data="admin_staff_activity")],
-                [InlineKeyboardButton(text="📈 По дням",
+                [InlineKeyboardButton(text="По дням",
                                       callback_data="admin_daily_metrics")],
-                [InlineKeyboardButton(text="🔄 Обновить",
+                [InlineKeyboardButton(text="Обновить",
                                       callback_data="admin_detailed_stats")],
-                [InlineKeyboardButton(text="◀️ Назад",
+                [InlineKeyboardButton(text="Назад",
                                       callback_data="admin_support_dashboard")]
             ])
 
@@ -1923,26 +1912,26 @@ class BotHandlers:
         try:
             stats = await self.db.get_support_statistics()
 
-            text = "👥 АКТИВНОСТЬ СОТРУДНИКОВ (за неделю)\n\n"
+            text = "АКТИВНОСТЬ СОТРУДНИКОВ (за неделю)\n\n"
 
             if not stats['staff_activity']:
-                text += "📭 Нет активности сотрудников за последнюю неделю"
+                text += "Нет активности сотрудников за последнюю неделю"
             else:
                 for i, staff in enumerate(stats['staff_activity'], 1):
-                    role = "👨‍💼 Администратор" if staff['is_admin'] else "🧑‍💼 Сотрудник"
+                    role = "Администратор" if staff['is_admin'] else "Сотрудник"
                     text += f"{i}. {role} (ID: {staff['user_id']})\n"
-                    text += f"   💬 Ответов: {staff['message_count']}\n\n"
+                    text += f"   Ответов: {staff['message_count']}\n\n"
 
-            text += f"\n📊 Общая статистика ответов:\n"
+            text += f"\nОбщая статистика ответов:\n"
             text += f"• Всего ответов: {stats['messages']['from_staff']}\n"
             text += f"• Среднее время ответа: {stats['response_time']['average_minutes']:.1f} мин\n"
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="📊 Общая статистика",
+                [InlineKeyboardButton(text="Общая статистика",
                                       callback_data="admin_detailed_stats")],
-                [InlineKeyboardButton(text="🔄 Обновить",
+                [InlineKeyboardButton(text="Обновить",
                                       callback_data="admin_staff_activity")],
-                [InlineKeyboardButton(text="◀️ Назад",
+                [InlineKeyboardButton(text="Назад",
                                       callback_data="admin_support_dashboard")]
             ])
 
@@ -1957,32 +1946,32 @@ class BotHandlers:
         try:
             stats = await self.db.get_support_statistics()
 
-            text = "📈 МЕТРИКИ ПО ДНЯМ (последняя неделя)\n\n"
+            text = "МЕТРИКИ ПО ДНЯМ (последняя неделя)\n\n"
 
             if not stats['daily_metrics']:
-                text += "📭 Нет данных за последнюю неделю"
+                text += "Нет данных за последнюю неделю"
             else:
                 for day in stats['daily_metrics']:
                     date_str = day['date'].strftime('%d.%m')
-                    text += f"📅 {date_str}:\n"
-                    text += f"   🆕 Создано: {day['tickets_created']}\n"
-                    text += f"   ✅ Закрыто: {day['tickets_closed']}\n\n"
+                    text += f"{date_str}:\n"
+                    text += f"   Создано: {day['tickets_created']}\n"
+                    text += f"   Закрыто: {day['tickets_closed']}\n\n"
 
             # Добавляем сводку
             total_created = sum(day['tickets_created'] for day in stats['daily_metrics'])
             total_closed = sum(day['tickets_closed'] for day in stats['daily_metrics'])
 
-            text += f"📋 Итого за неделю:\n"
+            text += f"Итого за неделю:\n"
             text += f"• Создано: {total_created}\n"
             text += f"• Закрыто: {total_closed}\n"
             text += f"• Среднее в день: {total_created/7:.1f}\n"
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="📊 Общая статистика",
+                [InlineKeyboardButton(text="Общая статистика",
                                       callback_data="admin_detailed_stats")],
-                [InlineKeyboardButton(text="🔄 Обновить",
+                [InlineKeyboardButton(text="Обновить",
                                       callback_data="admin_daily_metrics")],
-                [InlineKeyboardButton(text="◀️ Назад",
+                [InlineKeyboardButton(text="Назад",
                                       callback_data="admin_support_dashboard")]
             ])
 
@@ -1998,26 +1987,26 @@ class BotHandlers:
             tickets = await self.db.search_tickets(status="open", limit=20)
 
             if not tickets:
-                text = "✅ Нет открытых тикетов!"
+                text = "Нет открытых тикетов!"
             else:
-                text = f"📋 ОТКРЫТЫЕ ТИКЕТЫ ({len(tickets)})\n\n"
+                text = f"ОТКРЫТЫЕ ТИКЕТЫ ({len(tickets)})\n\n"
 
                 for ticket in tickets[:15]:  # Показываем первые 15
                     created_date = ticket['created_at'].strftime('%d.%m %H:%M')
-                    text += f"🎫 #{ticket['id']} - {ticket['first_name']}\n"
-                    text += f"📧 {ticket['email']}\n"
-                    text += f"📅 {created_date}\n"
-                    text += f"💬 {ticket['message'][:50]}...\n\n"
+                    text += f"#{ticket['id']} - {ticket['first_name']}\n"
+                    text += f"{ticket['email']}\n"
+                    text += f"{created_date}\n"
+                    text += f"{ticket['message'][:50]}...\n\n"
 
                 if len(tickets) > 15:
                     text += f"... и еще {len(tickets) - 15} тикетов"
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🚨 Срочные тикеты",
+                [InlineKeyboardButton(text="Срочные тикеты",
                                       callback_data="admin_urgent_tickets")],
-                [InlineKeyboardButton(text="🔄 Обновить",
+                [InlineKeyboardButton(text="Обновить",
                                       callback_data="admin_open_tickets")],
-                [InlineKeyboardButton(text="◀️ Назад",
+                [InlineKeyboardButton(text="Назад",
                                       callback_data="admin_support_dashboard")]
             ])
 
@@ -2035,20 +2024,20 @@ class BotHandlers:
             feedback_stats = await self.db.get_feedback_stats()
 
             text = f"""
-📊 СТАТИСТИКА БОТА
+СТАТИСТИКА БОТА
 
-👥 Пользователи: {stats['total_users']}
-🔄 Всего действий: {stats['total_actions']}
-💭 Отзывов: {feedback_stats['total']['total_feedback']}
-⭐ Средняя оценка: {feedback_stats['total']['average_rating']:.1f}/5
+Пользователи: {stats['total_users']}
+Всего действий: {stats['total_actions']}
+Отзывов: {feedback_stats['total']['total_feedback']}
+Средняя оценка: {feedback_stats['total']['average_rating']:.1f}/5
 
-🔥 Популярные действия:
+Популярные действия:
             """
 
             for action in stats['popular_actions'][:5]:
                 text += f"• {action['action']}: {action['count']}\n"
 
-            text += f"\n📈 Отзывы по категориям:\n"
+            text += f"\nОтзывы по категориям:\n"
 
             for category in feedback_stats['by_category'][:5]:
                 text += f"• {category['category']}: {category['avg_rating']:.1f}/5 ({category['count']} отзывов)\n"
@@ -2065,20 +2054,20 @@ class BotHandlers:
             tickets = await self.db.get_support_tickets("open")
 
             if not tickets:
-                text = "📋 Нет открытых обращений"
+                text = "Нет открытых обращений"
             else:
-                text = f"🎫 ОТКРЫТЫЕ ОБРАЩЕНИЯ ({len(tickets)})\n\n"
+                text = f"ОТКРЫТЫЕ ОБРАЩЕНИЯ ({len(tickets)})\n\n"
 
                 for ticket in tickets[:10]:  # Показываем только первые 10
                     text += f"#{ticket['id']} - {ticket['first_name']}\n"
-                    text += f"📧 {ticket['email']}\n"
-                    text += f"💬 {ticket['message'][:50]}...\n"
-                    text += f"⏰ {ticket['created_at'].strftime('%d.%m %H:%M')}\n\n"
+                    text += f"{ticket['email']}\n"
+                    text += f"{ticket['message'][:50]}...\n"
+                    text += f"{ticket['created_at'].strftime('%d.%m %H:%M')}\n\n"
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🔄 Обновить", callback_data="admin_tickets")],
-                [InlineKeyboardButton(text="🎛 Панель поддержки", callback_data="admin_support_dashboard")],
-                [InlineKeyboardButton(text="◀️ Назад", callback_data="admin_menu")]
+                [InlineKeyboardButton(text="Обновить", callback_data="admin_tickets")],
+                [InlineKeyboardButton(text="Панель поддержки", callback_data="admin_support_dashboard")],
+                [InlineKeyboardButton(text="Назад", callback_data="admin_menu")]
             ])
 
             await query.message.edit_text(text, reply_markup=keyboard)
@@ -2093,22 +2082,22 @@ class BotHandlers:
             feedback_stats = await self.db.get_feedback_stats()
 
             text = f"""
-💭 СТАТИСТИКА ОТЗЫВОВ
+СТАТИСТИКА ОТЗЫВОВ
 
-📊 Общая статистика:
+Общая статистика:
 • Всего отзывов: {feedback_stats['total']['total_feedback']}
 • Средняя оценка: {feedback_stats['total']['average_rating']:.1f}/5
 • Уникальных пользователей: {feedback_stats['total']['unique_users']}
 
-📈 По категориям:
+По категориям:
             """
 
             for category in feedback_stats['by_category']:
                 text += f"• {category['category']}: {category['avg_rating']:.1f}/5 ({category['count']})\n"
 
             keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="🔄 Обновить", callback_data="admin_feedback")],
-                [InlineKeyboardButton(text="◀️ Назад", callback_data="admin_menu")]
+                [InlineKeyboardButton(text="Обновить", callback_data="admin_feedback")],
+                [InlineKeyboardButton(text="Назад", callback_data="admin_menu")]
             ])
 
             await query.message.edit_text(text, reply_markup=keyboard)
@@ -2120,7 +2109,7 @@ class BotHandlers:
     async def _show_admin_schedule(self, query: CallbackQuery):
         """Показ управления расписанием для администратора"""
         text = """
-📅 УПРАВЛЕНИЕ РАСПИСАНИЕМ
+УПРАВЛЕНИЕ РАСПИСАНИЕМ
 
 Функции:
 • Просмотр текущего расписания
@@ -2132,12 +2121,38 @@ class BotHandlers:
         """
 
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="👀 Просмотр расписания", callback_data="admin_view_schedule")],
-            [InlineKeyboardButton(text="➕ Добавить выступление", callback_data="admin_add_schedule")],
-            [InlineKeyboardButton(text="◀️ Назад", callback_data="admin_menu")]
+            [InlineKeyboardButton(text="Просмотр расписания", callback_data="admin_view_schedule")],
+            [InlineKeyboardButton(text="Добавить выступление", callback_data="admin_add_schedule")],
+            [InlineKeyboardButton(text="Назад", callback_data="admin_menu")]
         ])
 
         await query.message.edit_text(text, reply_markup=keyboard)
+
+    # Обработка новых тикетов
+    async def process_new_ticket_email(self, message: Message, state: FSMContext):
+        """Обработка email для нового тикета"""
+        email = message.text.strip()
+
+        # Простая валидация email
+        if "@" not in email or "." not in email:
+            await message.answer(
+                "Неверный формат email. Попробуйте еще раз:\n\nПример: your@email.com",
+                reply_markup=Keyboards.back_to_main()
+            )
+            return
+
+        await state.update_data(email=email)
+        await message.answer(
+            f"Email сохранен: {email}\n\n"
+            "Теперь опишите вашу проблему или задайте вопрос.\n"
+            "Вы также можете прикрепить фотографию, документ или видео:",
+            reply_markup=Keyboards.back_to_main()
+        )
+        await state.set_state(SupportStates.waiting_for_new_ticket_message)
+
+    async def process_new_ticket_message(self, message: Message, state: FSMContext):
+        """Обработка сообщения для нового тикета"""
+        await self.process_support_message(message, state)
 
     # Обработка неизвестных сообщений
     async def handle_unknown_message(self, message: Message):
@@ -2150,7 +2165,7 @@ class BotHandlers:
         has_active_ticket = active_ticket is not None
 
         text = """
-❓ Не понимаю эту команду.
+Не понимаю эту команду.
 
 Используйте меню ниже или команды:
 • /start - начать работу с ботом
@@ -2160,6 +2175,6 @@ class BotHandlers:
         """
 
         if has_active_ticket:
-            text += f"\n\n🔴 У вас есть активное обращение #{active_ticket['id']} в поддержку"
+            text += f"\n\nУ вас есть активное обращение #{active_ticket['id']} в поддержку"
 
         await message.answer(text, reply_markup=Keyboards.main_menu_with_support_indicator(has_active_ticket))
