@@ -58,6 +58,9 @@ class BotHandlers:
         # Админ функции
         self.router.callback_query(F.data.startswith("admin_"))(self.handle_admin_actions)
 
+        # Сообщения от сотрудников поддержки в группе (ответы в тредах)
+        self.router.message(F.chat.id == int(config.SUPPORT_GROUP_ID) if config.SUPPORT_GROUP_ID else None)(self.handle_support_response)
+
         # Состояния поддержки
         self.router.message(StateFilter(SupportStates.waiting_for_email))(self.process_support_email)
         self.router.message(StateFilter(SupportStates.waiting_for_message))(self.process_support_message)
@@ -568,7 +571,7 @@ class BotHandlers:
             if message.photo:
                 photo_file_id = message.photo[-1].file_id
 
-            # Создание тикета в БД
+            # Создание тикета в БД (сначала без thread_id)
             ticket_id = await self.db.create_support_ticket(
                 user_id=message.from_user.id,
                 email=email,
@@ -579,37 +582,20 @@ class BotHandlers:
             await self._log_user_action(message.from_user.id, "support_ticket_created",
                                         {"ticket_id": ticket_id})
 
-            # Отправка в группу поддержки
-            if config.SUPPORT_GROUP_ID:
-                support_text = f"""
-🆘 НОВОЕ ОБРАЩЕНИЕ #{ticket_id}
+            # Отправка в группу поддержки с созданием треда
+            thread_id, initial_message_id = await self._send_to_support_group(
+                ticket_id, message, email, message_text, photo_file_id
+            )
 
-👤 Пользователь: {message.from_user.first_name}
-📧 Email: {email}
-🆔 User ID: {message.from_user.id}
+            # Обновление тикета с информацией о треде
+            if thread_id and initial_message_id:
+                await self.db.update_ticket_thread_info(ticket_id, thread_id, initial_message_id)
 
-💬 Сообщение:
-{message_text}
-
-⏰ Время: {datetime.now().strftime('%d.%m.%Y %H:%M')}
-                """
-
-                try:
-                    if photo_file_id:
-                        await self.bot.send_photo(
-                            config.SUPPORT_GROUP_ID,
-                            photo_file_id,
-                            caption=support_text
-                        )
-                    else:
-                        await self.bot.send_message(config.SUPPORT_GROUP_ID, support_text)
-                except Exception as e:
-                    logger.error(f"Failed to send to support group: {e}")
-
+            # Отправка подтверждения пользователю
             await message.answer(
                 f"✅ Ваше обращение #{ticket_id} принято!\n\n"
                 "Мы ответим в течение 2 часов.\n"
-                "Ответ придет на указанный email.\n\n"
+                "Ответ придет прямо в этот бот.\n\n"
                 "Хотите добавить что-то еще к обращению?",
                 reply_markup=InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text="➕ Добавить сообщение",
@@ -628,7 +614,218 @@ class BotHandlers:
             )
             await state.clear()
 
-    # Обратная связь
+    async def _send_to_support_group(self, ticket_id: int, message: Message,
+                                     email: str, message_text: str, photo_file_id: str = None) -> tuple:
+        """Отправка обращения в группу поддержки с созданием треда"""
+        if not config.SUPPORT_GROUP_ID:
+            return None, None
+
+        try:
+            user = message.from_user
+            support_text = f"""
+🆘 НОВОЕ ОБРАЩЕНИЕ #{ticket_id}
+
+👤 Пользователь: {user.first_name} {user.last_name or ''}
+📧 Email: {email}
+🆔 User ID: {user.id}
+👤 Username: @{user.username or 'не указан'}
+
+💬 Сообщение:
+{message_text}
+
+⏰ Время: {datetime.now().strftime('%d.%m.%Y %H:%M')}
+
+📝 Отвечайте в этом треде - ответы автоматически дойдут до пользователя в боте!
+
+⚠️ ВАЖНО: Пользователь увидит ответ от "Сотрудника Поддержки" (анонимно)
+👥 Права на ответ имеют только администраторы и сотрудники поддержки
+            """
+
+            # Отправка сообщения в группу
+            if photo_file_id:
+                sent_message = await self.bot.send_photo(
+                    config.SUPPORT_GROUP_ID,
+                    photo_file_id,
+                    caption=support_text
+                )
+            else:
+                sent_message = await self.bot.send_message(
+                    config.SUPPORT_GROUP_ID,
+                    support_text
+                )
+
+            # Если группа поддерживает топики, создаем тред
+            thread_id = None
+            if config.SUPPORT_GROUP_TOPICS:
+                try:
+                    # Создание треда (форум-топика)
+                    forum_topic = await self.bot.create_forum_topic(
+                        chat_id=config.SUPPORT_GROUP_ID,
+                        name=f"Тикет #{ticket_id} - {user.first_name}",
+                        icon_color=0xF44336  # Красный цвет для новых тикетов
+                    )
+                    thread_id = forum_topic.message_thread_id
+
+                    # Пересылаем сообщение в созданный тред
+                    if photo_file_id:
+                        thread_message = await self.bot.send_photo(
+                            config.SUPPORT_GROUP_ID,
+                            photo_file_id,
+                            caption=support_text,
+                            message_thread_id=thread_id
+                        )
+                    else:
+                        thread_message = await self.bot.send_message(
+                            config.SUPPORT_GROUP_ID,
+                            support_text,
+                            message_thread_id=thread_id
+                        )
+
+                    return thread_id, thread_message.message_id
+
+                except Exception as e:
+                    logger.error(f"Failed to create forum topic: {e}")
+                    # Если не удалось создать тред, возвращаем обычное сообщение
+                    return None, sent_message.message_id
+
+            return None, sent_message.message_id
+
+        except Exception as e:
+            logger.error(f"Failed to send to support group: {e}")
+            return None, None
+
+    async def handle_support_response(self, message: Message):
+        """Обработка ответов сотрудников поддержки и администраторов в группе"""
+        # Проверяем, что это ответ в треде
+        if not message.message_thread_id:
+            return
+
+        # Проверяем права пользователя
+        user_id = message.from_user.id
+        is_admin = user_id in config.ADMIN_IDS
+        is_support_staff = user_id in config.SUPPORT_STAFF_IDS
+
+        if not (is_admin or is_support_staff):
+            # Если пользователь не имеет прав - игнорируем сообщение
+            return
+
+        try:
+            # Находим тикет по thread_id
+            ticket = await self.db.get_ticket_by_thread(message.message_thread_id)
+
+            if not ticket:
+                logger.warning(f"Ticket not found for thread_id: {message.message_thread_id}")
+                return
+
+            # Определяем роль отвечающего для отображения пользователю
+            if is_admin:
+                sender_role = "Администратор Поддержки"
+                role_emoji = "👨‍💼"
+            else:
+                sender_role = "Сотрудник Поддержки"
+                role_emoji = "🧑‍💼"
+
+            # Сохраняем ответ в БД с указанием роли
+            await self.db.add_support_response(
+                ticket_id=ticket['id'],
+                staff_user_id=user_id,
+                response_text=message.text or message.caption or "",
+                is_admin=is_admin
+            )
+
+            # Формируем ответ для пользователя (без реального имени сотрудника)
+            response_text = f"""
+🆘 Ответ по обращению #{ticket['id']}
+
+{role_emoji} От: {sender_role}
+⏰ Время: {datetime.now().strftime('%d.%m.%Y %H:%M')}
+
+💬 Ответ:
+{message.text or message.caption or ""}
+
+───────────────────────
+❓ Если вопрос решен, можете создать новое обращение в случае других проблем через: /start → 🆘 Поддержка
+
+💡 Оцените нашу работу в разделе: /start → 💭 Обратная связь
+            """
+
+            # Отправляем ответ пользователю в бот
+            try:
+                if message.photo:
+                    await self.bot.send_photo(
+                        ticket['user_id'],
+                        message.photo[-1].file_id,
+                        caption=response_text
+                    )
+                elif message.document:
+                    await self.bot.send_document(
+                        ticket['user_id'],
+                        message.document.file_id,
+                        caption=response_text
+                    )
+                elif message.video:
+                    await self.bot.send_video(
+                        ticket['user_id'],
+                        message.video.file_id,
+                        caption=response_text
+                    )
+                else:
+                    await self.bot.send_message(
+                        ticket['user_id'],
+                        response_text
+                    )
+
+                # Подтверждение в треде (показываем роль отвечающего)
+                real_name = message.from_user.first_name or "Пользователь"
+                await message.reply(
+                    f"✅ Ответ отправлен пользователю\n"
+                    f"👤 Пользователь: {ticket['first_name']} (ID: {ticket['user_id']})\n"
+                    f"📝 От: {real_name} ({sender_role})\n"
+                    f"📱 Пользователь увидит ответ от \"{sender_role}\""
+                )
+
+                # Логируем ответ с указанием роли
+                await self._log_user_action(
+                    user_id,
+                    "support_response_sent",
+                    {
+                        "ticket_id": ticket['id'],
+                        "user_id": ticket['user_id'],
+                        "is_admin": is_admin,
+                        "role": sender_role
+                    }
+                )
+
+            except Exception as e:
+                logger.error(f"Failed to send response to user {ticket['user_id']}: {e}")
+
+                # Детальная ошибка в треде
+                error_message = f"""
+❌ Не удалось отправить ответ пользователю
+
+👤 Пользователь: {ticket['first_name']} {ticket['last_name'] or ''}
+🆔 User ID: {ticket['user_id']}
+📧 Email: {ticket['email']}
+❌ Ошибка: {str(e)}
+
+💡 Возможные причины:
+• Пользователь заблокировал бота
+• Пользователь удалил аккаунт
+• Технические проблемы
+
+📧 Рекомендуется связаться по email: {ticket['email']}
+                """
+
+                await message.reply(error_message)
+
+        except Exception as e:
+            logger.error(f"Error handling support response: {e}")
+            await message.reply(
+                f"❌ Ошибка при обработке ответа\n"
+                f"📝 Детали: {str(e)}"
+            )
+
+    # Обработка неизвестных сообщений
     async def start_feedback(self, query: CallbackQuery, state: FSMContext):
         """Начало процесса оставления отзыва"""
         await self._log_user_action(query.from_user.id, "feedback_start")

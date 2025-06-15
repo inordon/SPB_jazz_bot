@@ -17,11 +17,13 @@ class Config:
     DB_USER: str = os.getenv("DB_USER", "postgres")
     DB_PASSWORD: str = os.getenv("DB_PASSWORD", "password")
 
-    # Администраторы
+    # Администраторы и сотрудники поддержки
     ADMIN_IDS: List[int] = [int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x]
+    SUPPORT_STAFF_IDS: List[int] = [int(x) for x in os.getenv("SUPPORT_STAFF_IDS", "").split(",") if x]
 
     # Каналы и группы
     SUPPORT_GROUP_ID: str = os.getenv("SUPPORT_GROUP_ID")
+    SUPPORT_GROUP_TOPICS: bool = os.getenv("SUPPORT_GROUP_TOPICS", "true").lower() == "true"
     FEEDBACK_CHANNEL_ID: str = os.getenv("FEEDBACK_CHANNEL_ID")
 
     # Email настройки
@@ -73,7 +75,7 @@ class Config:
         return f"{cls.YANDEX_MAPS_BASE_URL}{start_coords}~{destination_coords}&rtt=auto"
 
     # Пути к изображениям карт (добавить в конфигурацию)
-    MAPS_IMAGES_PATH: str = os.getenv("MAPS_IMAGES_PATH", "images/")
+    MAPS_IMAGES_PATH: str = os.getenv("MAPS_IMAGES_PATH", "../images/")
 
     def get_database_url(self) -> str:
         return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"

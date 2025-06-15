@@ -66,6 +66,8 @@ class Database:
                     message TEXT,
                     photo_file_id VARCHAR(255),
                     status VARCHAR(50) DEFAULT 'open',
+                    thread_id INTEGER,
+                    initial_message_id INTEGER,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -123,7 +125,17 @@ class Database:
                 )
             """)
 
-            # Статистика использования
+            # Ответы сотрудников поддержки и администраторов
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS support_responses (
+                    id SERIAL PRIMARY KEY,
+                    ticket_id INTEGER REFERENCES support_tickets(id),
+                    staff_user_id BIGINT,
+                    response_text TEXT,
+                    is_admin BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS usage_stats (
                     id SERIAL PRIMARY KEY,
@@ -162,15 +174,44 @@ class Database:
 
     # Методы для поддержки
     async def create_support_ticket(self, user_id: int, email: str,
-                                    message: str, photo_file_id: str = None) -> int:
+                                    message: str, photo_file_id: str = None,
+                                    thread_id: int = None, initial_message_id: int = None) -> int:
         """Создание тикета поддержки"""
         async with self.get_connection() as conn:
             ticket_id = await conn.fetchval("""
-                INSERT INTO support_tickets (user_id, email, message, photo_file_id)
-                VALUES ($1, $2, $3, $4)
+                INSERT INTO support_tickets (user_id, email, message, photo_file_id, thread_id, initial_message_id)
+                VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING id
-            """, user_id, email, message, photo_file_id)
+            """, user_id, email, message, photo_file_id, thread_id, initial_message_id)
             return ticket_id
+
+    async def update_ticket_thread_info(self, ticket_id: int, thread_id: int, initial_message_id: int):
+        """Обновление информации о треде для тикета"""
+        async with self.get_connection() as conn:
+            await conn.execute("""
+                UPDATE support_tickets 
+                SET thread_id = $1, initial_message_id = $2, updated_at = CURRENT_TIMESTAMP
+                WHERE id = $3
+            """, thread_id, initial_message_id, ticket_id)
+
+    async def get_ticket_by_thread(self, thread_id: int) -> Optional[Dict]:
+        """Получение тикета по ID треда"""
+        async with self.get_connection() as conn:
+            row = await conn.fetchrow("""
+                SELECT st.*, u.username, u.first_name, u.last_name
+                FROM support_tickets st
+                JOIN users u ON st.user_id = u.id
+                WHERE st.thread_id = $1
+            """, thread_id)
+            return dict(row) if row else None
+
+    async def add_support_response(self, ticket_id: int, staff_user_id: int, response_text: str, is_admin: bool = False):
+        """Добавление ответа сотрудника поддержки или администратора"""
+        async with self.get_connection() as conn:
+            await conn.execute("""
+                INSERT INTO support_responses (ticket_id, staff_user_id, response_text, is_admin)
+                VALUES ($1, $2, $3, $4)
+            """, ticket_id, staff_user_id, response_text, is_admin)
 
     async def get_support_tickets(self, status: str = None) -> List[Dict]:
         """Получение тикетов поддержки"""
