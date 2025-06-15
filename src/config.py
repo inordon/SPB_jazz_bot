@@ -1,3 +1,7 @@
+"""
+Конфигурация Telegram-бота для музыкального фестиваля
+"""
+
 import os
 from typing import List
 from dataclasses import dataclass
@@ -42,6 +46,9 @@ class Config:
         "Spotify": "https://open.spotify.com/festival"
     }
 
+    # Билеты
+    TICKET_PURCHASE_URL: str = os.getenv("TICKET_PURCHASE_URL", "https://tickets.festival.com")
+
     # Яндекс.Карты маршруты
     YANDEX_MAPS_BASE_URL = "https://yandex.ru/maps/?rtext="
 
@@ -67,15 +74,15 @@ class Config:
         "medical": "images/medical_map.jpg"
     }
 
+    # Пути к изображениям карт (добавить в конфигурацию)
+    MAPS_IMAGES_PATH: str = os.getenv("MAPS_IMAGES_PATH", "images/")
+
     @classmethod
     def get_yandex_route_url(cls, destination_coords: str, start_coords: str = None) -> str:
         """Генерация URL для маршрута в Яндекс.Картах"""
         if not start_coords:
             start_coords = cls.FESTIVAL_COORDINATES
         return f"{cls.YANDEX_MAPS_BASE_URL}{start_coords}~{destination_coords}&rtt=auto"
-
-    # Пути к изображениям карт (добавить в конфигурацию)
-    MAPS_IMAGES_PATH: str = os.getenv("MAPS_IMAGES_PATH", "../images/")
 
     def get_database_url(self) -> str:
         return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"

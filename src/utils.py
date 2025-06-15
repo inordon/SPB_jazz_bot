@@ -1,3 +1,7 @@
+"""
+Утилиты и вспомогательные функции
+"""
+
 import asyncio
 import logging
 import smtplib
@@ -55,7 +59,7 @@ class EmailSender:
 class DataBackup:
     """Класс для резервного копирования данных"""
 
-    def __init__(self, database: Database):
+    def __init__(self, database):
         self.db = database
 
     async def create_backup(self) -> dict:
@@ -101,7 +105,7 @@ class DataBackup:
 class HealthChecker:
     """Класс для мониторинга состояния бота"""
 
-    def __init__(self, database: Database, bot):
+    def __init__(self, database, bot):
         self.db = database
         self.bot = bot
         self.last_check = None

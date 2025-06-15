@@ -1,3 +1,6 @@
+"""
+Основной файл запуска Telegram-бота для музыкального фестиваля
+"""
 
 import asyncio
 import logging
@@ -7,12 +10,17 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.memory import MemoryStorage
 
+from config import config
+from database import Database
+from handlers import BotHandlers
+from utils import EmailSender, DataBackup, HealthChecker
+
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('bot.log', encoding='utf-8'),
+        logging.FileHandler('logs/bot.log', encoding='utf-8'),
         logging.StreamHandler(sys.stdout)
     ]
 )

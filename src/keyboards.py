@@ -1,5 +1,10 @@
+"""
+Клавиатуры для Telegram-бота
+"""
+
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 from typing import List, Dict
+from config import config
 
 class Keyboards:
     @staticmethod
@@ -72,7 +77,7 @@ class Keyboards:
             [InlineKeyboardButton(text="🎪 Фестиваль в целом", callback_data="feedback_festival")],
             [InlineKeyboardButton(text="🍕 Фудкорты", callback_data="feedback_food")],
             [InlineKeyboardButton(text="🎨 Мастер-классы", callback_data="feedback_workshops")],
-            [InlineKeyboardButton(text="🎵 Школа продюсеров", callback_data="feedback_school")],
+            [InlineKeyboardButton(text="🎓 Лекторий", callback_data="feedback_lectures")],
             [InlineKeyboardButton(text="🏗 Инфраструктура", callback_data="feedback_infrastructure")],
             [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
         ]
@@ -105,6 +110,10 @@ class Keyboards:
             [InlineKeyboardButton(text="🎫 Управление тикетами", callback_data="admin_tickets")],
             [InlineKeyboardButton(text="💭 Отзывы", callback_data="admin_feedback")],
             [InlineKeyboardButton(text="📅 Расписание", callback_data="admin_schedule")],
+            [InlineKeyboardButton(text="👥 Пользователи", callback_data="admin_users")],
+            [InlineKeyboardButton(text="📢 Рассылка", callback_data="admin_broadcast")],
+            [InlineKeyboardButton(text="⚙️ Настройки", callback_data="admin_settings")],
+            [InlineKeyboardButton(text="🔧 Система", callback_data="admin_system")],
             [InlineKeyboardButton(text="🏠 Главное меню", callback_data="main_menu")]
         ]
         return InlineKeyboardMarkup(inline_keyboard=buttons)

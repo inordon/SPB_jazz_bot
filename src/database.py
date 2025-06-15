@@ -1,3 +1,7 @@
+"""
+Работа с базой данных PostgreSQL
+"""
+
 import asyncio
 import asyncpg
 import logging
@@ -73,6 +77,18 @@ class Database:
                 )
             """)
 
+            # Ответы сотрудников поддержки и администраторов
+            await conn.execute("""
+                CREATE TABLE IF NOT EXISTS support_responses (
+                    id SERIAL PRIMARY KEY,
+                    ticket_id INTEGER REFERENCES support_tickets(id),
+                    staff_user_id BIGINT,
+                    response_text TEXT,
+                    is_admin BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+
             # Отзывы
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS feedback (
@@ -125,17 +141,7 @@ class Database:
                 )
             """)
 
-            # Ответы сотрудников поддержки и администраторов
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS support_responses (
-                    id SERIAL PRIMARY KEY,
-                    ticket_id INTEGER REFERENCES support_tickets(id),
-                    staff_user_id BIGINT,
-                    response_text TEXT,
-                    is_admin BOOLEAN DEFAULT FALSE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
+            # Статистика использования
             await conn.execute("""
                 CREATE TABLE IF NOT EXISTS usage_stats (
                     id SERIAL PRIMARY KEY,
