@@ -1,6 +1,6 @@
 import os
-from typing import List, Dict, Tuple
-from dataclasses import dataclass
+from typing import List, Dict, Tuple, Optional
+from dataclasses import dataclass, field
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -8,95 +8,63 @@ load_dotenv()
 @dataclass
 class Config:
     # Telegram Bot настройки
-    BOT_TOKEN: str = os.getenv("BOT_TOKEN")
+    BOT_TOKEN: str = os.getenv("BOT_TOKEN", "")
 
     # База данных
     DB_HOST: str = os.getenv("DB_HOST", "localhost")
     DB_PORT: int = int(os.getenv("DB_PORT", "5432"))
     DB_NAME: str = os.getenv("DB_NAME", "festival_bot")
     DB_USER: str = os.getenv("DB_USER", "postgres")
-    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "password")
+    DB_PASSWORD: str = os.getenv("DB_PASSWORD", "")
 
-    # Администраторы и сотрудники поддержки
-    ADMIN_IDS: List[int] = [int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x]
-    SUPPORT_STAFF_IDS: List[int] = [int(x) for x in os.getenv("SUPPORT_STAFF_IDS", "").split(",") if x]
+    # Администраторы и сотрудники поддержки (ИСПРАВЛЕНО)
+    ADMIN_IDS: List[int] = field(default_factory=lambda: [int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip()])
+    SUPPORT_STAFF_IDS: List[int] = field(default_factory=lambda: [int(x) for x in os.getenv("SUPPORT_STAFF_IDS", "").split(",") if x.strip()])
 
     # Каналы и группы
-    SUPPORT_GROUP_ID: str = os.getenv("SUPPORT_GROUP_ID")
+    SUPPORT_GROUP_ID: Optional[str] = os.getenv("SUPPORT_GROUP_ID")
     SUPPORT_GROUP_TOPICS: bool = os.getenv("SUPPORT_GROUP_TOPICS", "true").lower() == "true"
-    FEEDBACK_CHANNEL_ID: str = os.getenv("FEEDBACK_CHANNEL_ID")
+    FEEDBACK_CHANNEL_ID: Optional[str] = os.getenv("FEEDBACK_CHANNEL_ID")
 
     # Email настройки
     SMTP_SERVER: str = os.getenv("SMTP_SERVER", "smtp.gmail.com")
     SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
-    EMAIL_USER: str = os.getenv("EMAIL_USER")
-    EMAIL_PASSWORD: str = os.getenv("EMAIL_PASSWORD")
-    SUPPORT_EMAIL: str = os.getenv("SUPPORT_EMAIL")
+    EMAIL_USER: Optional[str] = os.getenv("EMAIL_USER")
+    EMAIL_PASSWORD: Optional[str] = os.getenv("EMAIL_PASSWORD")
+    SUPPORT_EMAIL: Optional[str] = os.getenv("SUPPORT_EMAIL")
 
-    # Социальные сети
-    SOCIAL_LINKS = {
+    # Социальные сети (ИСПРАВЛЕНО)
+    SOCIAL_LINKS: Dict[str, str] = field(default_factory=lambda: {
         "Instagram": "https://instagram.com/festival",
         "VK": "https://vk.com/festival",
         "Telegram": "https://t.me/festival_channel",
         "YouTube": "https://youtube.com/festival",
         "Spotify": "https://open.spotify.com/festival"
-    }
+    })
 
     # Билеты
     TICKET_PURCHASE_URL: str = os.getenv("TICKET_PURCHASE_URL", "https://tickets.festival.com")
 
     # Яндекс.Карты маршруты
-    YANDEX_MAPS_BASE_URL = "https://yandex.ru/maps/?rtext="
+    YANDEX_MAPS_BASE_URL: str = "https://yandex.ru/maps/?rtext="
 
     # Координаты фестиваля (основная точка)
-    FESTIVAL_COORDINATES = os.getenv("FESTIVAL_COORDINATES", "55.7558,37.6176")
+    FESTIVAL_COORDINATES: str = os.getenv("FESTIVAL_COORDINATES", "55.7558,37.6176")
 
-    # Координаты ключевых единичных точек
-    SINGLE_LOCATIONS_COORDINATES = {
+    # Координаты ключевых единичных точек (ИСПРАВЛЕНО)
+    SINGLE_LOCATIONS_COORDINATES: Dict[str, str] = field(default_factory=lambda: {
         "foodcourt": os.getenv("FOODCOURT_COORDINATES", "55.7562,37.6174"),
         "workshops": os.getenv("WORKSHOPS_COORDINATES", "55.7556,37.6182"),
         "main_stage": os.getenv("MAIN_STAGE_COORDINATES", "55.7558,37.6176"),
         "small_stage": os.getenv("SMALL_STAGE_COORDINATES", "55.7560,37.6180"),
         "lecture_hall": os.getenv("LECTURE_HALL_COORDINATES", "55.7559,37.6179"),
-    }
-
-    # Множественные локации
-    @property
-    def MULTIPLE_LOCATIONS(self) -> Dict[str, List[Dict[str, str]]]:
-        """Получение множественных локаций с названиями"""
-        locations = {}
-
-        # Сувениры
-        souvenirs_coords = os.getenv("SOUVENIRS_COORDINATES", "55.7560,37.6170").split(";")
-        souvenirs_names = os.getenv("SOUVENIRS_NAMES", "Сувенирный магазин").split(";")
-        locations["souvenirs"] = [
-            {"name": name.strip(), "coordinates": coord.strip()}
-            for name, coord in zip(souvenirs_names, souvenirs_coords)
-        ]
-
-        # Туалеты
-        toilets_coords = os.getenv("TOILETS_COORDINATES", "55.7559,37.6178").split(";")
-        toilets_names = os.getenv("TOILETS_NAMES", "Туалеты").split(";")
-        locations["toilets"] = [
-            {"name": name.strip(), "coordinates": coord.strip()}
-            for name, coord in zip(toilets_names, toilets_coords)
-        ]
-
-        # Медпункты
-        medical_coords = os.getenv("MEDICAL_COORDINATES", "55.7558,37.6176").split(";")
-        medical_names = os.getenv("MEDICAL_NAMES", "Медпункт").split(";")
-        locations["medical"] = [
-            {"name": name.strip(), "coordinates": coord.strip()}
-            for name, coord in zip(medical_names, medical_coords)
-        ]
-
-        return locations
+    })
 
     # Пути к изображениям карт
     MAPS_IMAGES_PATH: str = os.getenv("MAPS_IMAGES_PATH", "images/")
 
-    # Пути к изображениям карт (обновлено)
-    MAPS_IMAGES = {
+    # Пути к изображениям карт (ИСПРАВЛЕНО)
+    MAPS_IMAGES: Dict[str, str] = field(default_factory=lambda: {
         "festival_map": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "festival_map.jpg"),
         "main_stage": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "main_stage_map.jpg"),
         "small_stage": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "small_stage_map.jpg"),
@@ -106,10 +74,10 @@ class Config:
         "souvenirs": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "souvenirs_map.jpg"),
         "toilets": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "toilets_map.jpg"),
         "medical": os.path.join(os.getenv("MAPS_IMAGES_PATH", "images/"), "medical_map.jpg")
-    }
+    })
 
-    # Информация о локациях для отображения
-    LOCATIONS_INFO = {
+    # Информация о локациях для отображения (ИСПРАВЛЕНО)
+    LOCATIONS_INFO: Dict[str, Dict[str, any]] = field(default_factory=lambda: {
         "main_stage": {
             "title": "🎤 Главная сцена",
             "description": "Основная концертная площадка фестиваля",
@@ -198,44 +166,42 @@ class Config:
                 "⚕️ Круглосуточно"
             ]
         }
-    }
+    })
 
-    # Rate limiting настройки
-    RATE_LIMIT_SETTINGS = {
-        "message_timeout_seconds": 5,           # Таймаут между сообщениями (секунды)
-        "hourly_message_limit": 20,             # Лимит сообщений в час
-        "daily_message_limit": 100,             # Лимит сообщений в день
-        "spam_block_duration_hours": 1,         # Длительность блокировки за спам (часы)
-        "daily_block_duration_hours": 24        # Длительность дневной блокировки (часы)
-    }
+    # Rate limiting настройки (ИСПРАВЛЕНО)
+    RATE_LIMIT_SETTINGS: Dict[str, int] = field(default_factory=lambda: {
+        "message_timeout_seconds": 5,
+        "hourly_message_limit": 20,
+        "daily_message_limit": 100,
+        "spam_block_duration_hours": 1,
+        "daily_block_duration_hours": 24
+    })
 
-    # Настройки поддержки
-    SUPPORT_SETTINGS = {
-        "max_tickets_per_user": 5,              # Максимум открытых тикетов на пользователя
-        "auto_close_days": 7,                   # Автозакрытие неактивных тикетов (дни)
-        "urgent_response_hours": 2,             # Часы для пометки тикета как "срочный"
-        "max_message_length": 4000,             # Максимальная длина сообщения
-        "min_message_length": 10,               # Минимальная длина сообщения
-        "allowed_file_types": [                 # Разрешенные типы файлов
-            "photo", "document", "video", "audio"
-        ],
-        "max_file_size_mb": 20                  # Максимальный размер файла (МБ)
-    }
+    # Настройки поддержки (ИСПРАВЛЕНО)
+    SUPPORT_SETTINGS: Dict[str, any] = field(default_factory=lambda: {
+        "max_tickets_per_user": 5,
+        "auto_close_days": 7,
+        "urgent_response_hours": 2,
+        "max_message_length": 4000,
+        "min_message_length": 10,
+        "allowed_file_types": ["photo", "document", "video", "audio"],
+        "max_file_size_mb": 20
+    })
 
-    # Настройки критических отзывов
-    CRITICAL_FEEDBACK_SETTINGS = {
-        "critical_rating_threshold": 2,        # Оценки <= 2 считаются критическими
-        "urgent_rating_threshold": 1,          # Оценки <= 1 считаются срочными
-        "notify_admins": True,                  # Уведомлять администраторов
-        "notify_support_group": True,           # Уведомлять группу поддержки
-        "auto_create_ticket": False,            # Автоматически создавать тикет поддержки
-        "require_immediate_action": True,       # Требовать немедленных действий для рейтинга 1
-        "max_critical_per_hour": 5,            # Максимум критических уведомлений в час
-        "escalation_delay_hours": 2,           # Время для эскалации без ответа
-    }
+    # Настройки критических отзывов (ИСПРАВЛЕНО)
+    CRITICAL_FEEDBACK_SETTINGS: Dict[str, any] = field(default_factory=lambda: {
+        "critical_rating_threshold": 2,
+        "urgent_rating_threshold": 1,
+        "notify_admins": True,
+        "notify_support_group": True,
+        "auto_create_ticket": False,
+        "require_immediate_action": True,
+        "max_critical_per_hour": 5,
+        "escalation_delay_hours": 2,
+    })
 
-    # Рекомендации по категориям для критических отзывов
-    CATEGORY_RECOMMENDATIONS = {
+    # Рекомендации по категориям для критических отзывов (ИСПРАВЛЕНО)
+    CATEGORY_RECOMMENDATIONS: Dict[str, List[str]] = field(default_factory=lambda: {
         "festival": [
             "Проверить общую организацию мероприятия",
             "Рассмотреть жалобы на безопасность или комфорт",
@@ -270,56 +236,54 @@ class Config:
             "Проверить доступность для людей с ограниченными возможностями",
             "Улучшить освещение и чистоту"
         ]
-    }
+    })
 
-    # Настройки мониторинга
-    MONITORING_SETTINGS = {
-        "health_check_interval_minutes": 5,     # Интервал проверки здоровья (минуты)
-        "log_retention_days": 30,               # Хранение логов (дни)
-        "stats_retention_days": 365,            # Хранение статистики (дни)
-        "backup_interval_hours": 24,            # Интервал резервного копирования (часы)
-        "alert_admins_on_errors": True,         # Уведомлять админов об ошибках
-        "max_error_notifications_per_hour": 5   # Максимум уведомлений об ошибках в час
-    }
+    # Настройки мониторинга (ИСПРАВЛЕНО)
+    MONITORING_SETTINGS: Dict[str, any] = field(default_factory=lambda: {
+        "health_check_interval_minutes": 5,
+        "log_retention_days": 30,
+        "stats_retention_days": 365,
+        "backup_interval_hours": 24,
+        "alert_admins_on_errors": True,
+        "max_error_notifications_per_hour": 5
+    })
 
-    # Настройки безопасности
-    SECURITY_SETTINGS = {
-        "enable_rate_limiting": True,           # Включить ограничение скорости
-        "enable_spam_detection": True,          # Включить обнаружение спама
-        "block_suspicious_users": True,         # Блокировать подозрительных пользователей
-        "log_all_actions": True,                # Логировать все действия
-        "require_email_verification": False,    # Требовать верификацию email
-        "max_login_attempts": 5,                # Максимум попыток входа
-        "blacklisted_words": [                  # Черный список слов
-            "spam", "casino", "viagra", "bitcoin"
-        ]
-    }
+    # Настройки безопасности (ИСПРАВЛЕНО)
+    SECURITY_SETTINGS: Dict[str, any] = field(default_factory=lambda: {
+        "enable_rate_limiting": True,
+        "enable_spam_detection": True,
+        "block_suspicious_users": True,
+        "log_all_actions": True,
+        "require_email_verification": False,
+        "max_login_attempts": 5,
+        "blacklisted_words": ["spam", "casino", "viagra", "bitcoin"]
+    })
 
-    # Настройки уведомлений
-    NOTIFICATION_SETTINGS = {
-        "notify_admins_new_tickets": True,      # Уведомлять админов о новых тикетах
-        "notify_admins_urgent_tickets": True,   # Уведомлять об срочных тикетах
-        "notify_admins_system_errors": True,    # Уведомлять о системных ошибках
-        "notify_admins_high_load": True,        # Уведомлять о высокой нагрузке
-        "notify_admins_critical_feedback": True, # Уведомлять о критических отзывах
-        "daily_stats_report": True,             # Ежедневный отчет по статистике
-        "weekly_summary_report": True           # Еженедельная сводка
-    }
+    # Настройки уведомлений (ИСПРАВЛЕНО)
+    NOTIFICATION_SETTINGS: Dict[str, bool] = field(default_factory=lambda: {
+        "notify_admins_new_tickets": True,
+        "notify_admins_urgent_tickets": True,
+        "notify_admins_system_errors": True,
+        "notify_admins_high_load": True,
+        "notify_admins_critical_feedback": True,
+        "daily_stats_report": True,
+        "weekly_summary_report": True
+    })
 
-    # Текстовые шаблоны
-    TEXT_TEMPLATES = {
+    # Текстовые шаблоны (ИСПРАВЛЕНО)
+    TEXT_TEMPLATES: Dict[str, str] = field(default_factory=lambda: {
         "welcome_message": """
 🎵 Добро пожаловать на Музыкальный Фестиваль!
 
 Привет, {user_name}! 👋
 
 Этот бот поможет тебе:
-• 📅 Узнать расписание выступлений
-• 🗺 Найти нужные места на фестивале
-• 🎫 Получить информацию о билетах
-• 🎨 Записаться на мастер-классы
-• 🆘 Связаться с поддержкой
-• 💭 Оставить отзыв
+- 📅 Узнать расписание выступлений
+- 🗺 Найти нужные места на фестивале
+- 🎫 Получить информацию о билетах
+- 🎨 Записаться на мастер-классы
+- 🆘 Связаться с поддержкой
+- 💭 Оставить отзыв
 
 Выбери нужный раздел в меню ниже ⬇️
         """,
@@ -359,7 +323,6 @@ class Config:
 Ваше мнение поможет нам стать лучше! 🙏
         """,
 
-        # Шаблоны для критических отзывов
         "critical_feedback_admin": """
 🚨 {severity} ОТЗЫВ
 
@@ -368,9 +331,9 @@ class Config:
 ⚡ Приоритет: {priority}
 
 👤 От пользователя:
-• Имя: {user_name}
-• Username: @{username}
-• ID: {user_id}
+- Имя: {user_name}
+- Username: @{username}
+- ID: {user_id}
 
 💬 Комментарий:
 {comment}
@@ -381,8 +344,8 @@ class Config:
 {recommendations}
 
 📞 КОНТАКТ С ПОЛЬЗОВАТЕЛЕМ:
-• Telegram: @{username}
-• ID для связи: {user_id}
+- Telegram: @{username}
+- ID для связи: {user_id}
 
 💡 Этот отзыв требует оперативного внимания!
         """,
@@ -436,10 +399,10 @@ class Config:
 
 🌟 Поделитесь впечатлениями с друзьями в наших соцсетях!
         """
-    }
+    })
 
-    # Emoji и символы
-    EMOJIS = {
+    # Emoji и символы (ИСПРАВЛЕНО)
+    EMOJIS: Dict[str, str] = field(default_factory=lambda: {
         "success": "✅",
         "error": "❌",
         "warning": "⚠️",
@@ -458,14 +421,50 @@ class Config:
         "fire": "🔥",
         "rocket": "🚀",
         "heart": "❤️"
-    }
+    })
+
+    # Множественные локации (метод)
+    def get_multiple_locations(self) -> Dict[str, List[Dict[str, str]]]:
+        """Получение множественных локаций с названиями"""
+        locations = {}
+
+        # Сувениры
+        souvenirs_coords = os.getenv("SOUVENIRS_COORDINATES", "55.7560,37.6170").split(";")
+        souvenirs_names = os.getenv("SOUVENIRS_NAMES", "Сувенирный магазин").split(";")
+        locations["souvenirs"] = [
+            {"name": name.strip(), "coordinates": coord.strip()}
+            for name, coord in zip(souvenirs_names, souvenirs_coords)
+        ]
+
+        # Туалеты
+        toilets_coords = os.getenv("TOILETS_COORDINATES", "55.7559,37.6178").split(";")
+        toilets_names = os.getenv("TOILETS_NAMES", "Туалеты").split(";")
+        locations["toilets"] = [
+            {"name": name.strip(), "coordinates": coord.strip()}
+            for name, coord in zip(toilets_names, toilets_coords)
+        ]
+
+        # Медпункты
+        medical_coords = os.getenv("MEDICAL_COORDINATES", "55.7558,37.6176").split(";")
+        medical_names = os.getenv("MEDICAL_NAMES", "Медпункт").split(";")
+        locations["medical"] = [
+            {"name": name.strip(), "coordinates": coord.strip()}
+            for name, coord in zip(medical_names, medical_coords)
+        ]
+
+        return locations
+
+    @property
+    def MULTIPLE_LOCATIONS(self) -> Dict[str, List[Dict[str, str]]]:
+        """Получение множественных локаций с названиями"""
+        return self.get_multiple_locations()
 
     @classmethod
     def get_yandex_route_url(cls, destination_coords: str, start_coords: str = None) -> str:
         """Генерация URL для маршрута в Яндекс.Картах"""
         if not start_coords:
-            start_coords = cls.FESTIVAL_COORDINATES
-        return f"{cls.YANDEX_MAPS_BASE_URL}{start_coords}~{destination_coords}&rtt=auto"
+            start_coords = os.getenv("FESTIVAL_COORDINATES", "55.7558,37.6176")
+        return f"https://yandex.ru/maps/?rtext={start_coords}~{destination_coords}&rtt=auto"
 
     def get_location_coordinates(self, location_type: str, location_index: int = 0) -> str:
         """Получение координат локации по типу и индексу"""
@@ -575,10 +574,13 @@ class Config:
         validate_coordinates(self.FESTIVAL_COORDINATES, "FESTIVAL_COORDINATES")
 
         # Проверяем множественные координаты
-        for location_type in ["souvenirs", "toilets", "medical"]:
-            locations = self.get_all_locations_of_type(location_type)
-            for i, location in enumerate(locations):
-                validate_coordinates(location["coordinates"], f"{location_type}[{i}]")
+        try:
+            for location_type in ["souvenirs", "toilets", "medical"]:
+                locations = self.get_all_locations_of_type(location_type)
+                for i, location in enumerate(locations):
+                    validate_coordinates(location["coordinates"], f"{location_type}[{i}]")
+        except Exception as e:
+            errors.append(f"Error validating multiple locations: {str(e)}")
 
         if errors:
             print("Configuration errors:")
@@ -655,10 +657,6 @@ class Config:
 
     def __post_init__(self):
         """Пост-инициализация конфигурации"""
-        # Валидация при создании объекта
-        if not self.validate_config():
-            raise ValueError("Invalid configuration")
-
         # Создание директорий если они не существуют
         import pathlib
         pathlib.Path("logs").mkdir(exist_ok=True)
@@ -684,11 +682,14 @@ if __name__ == "__main__":
 
         # Показываем информацию о локациях
         print(f"\n📍 Locations configured:")
-        for location_type in ["souvenirs", "toilets", "medical"]:
-            locations = config.get_all_locations_of_type(location_type)
-            print(f"  {location_type}: {len(locations)} points")
-            for i, loc in enumerate(locations):
-                print(f"    {i+1}. {loc['name']} ({loc['coordinates']})")
+        try:
+            for location_type in ["souvenirs", "toilets", "medical"]:
+                locations = config.get_all_locations_of_type(location_type)
+                print(f"  {location_type}: {len(locations)} points")
+                for i, loc in enumerate(locations):
+                    print(f"    {i+1}. {loc['name']} ({loc['coordinates']})")
+        except Exception as e:
+            print(f"  Error loading locations: {e}")
 
         # Показываем настройки критических отзывов
         critical_config = config.get_critical_feedback_config()
