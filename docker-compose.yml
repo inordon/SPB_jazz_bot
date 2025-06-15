@@ -4,7 +4,7 @@ services:
   # PostgreSQL база данных
   postgres:
     image: postgres:15-alpine
-    container_name: festival_postgres
+    container_name: festival_postgres  # Уникальное имя
     environment:
       POSTGRES_DB: festival_bot
       POSTGRES_USER: festival_user
@@ -15,7 +15,7 @@ services:
       - ./sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
       - ./sql/seed_data.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "${DB_PORT:-5433}:5432"  # Внешний порт 5433
     networks:
       - festival_network
     restart: unless-stopped
@@ -29,12 +29,12 @@ services:
   # Redis для кэширования
   redis:
     image: redis:7-alpine
-    container_name: festival_redis
+    container_name: festival_redis  # Уникальное имя
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password_123}
     volumes:
       - redis_data:/data
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "${REDIS_PORT:-6380}:6379"  # Внешний порт 6380
     networks:
       - festival_network
     restart: unless-stopped
@@ -61,16 +61,16 @@ services:
       # Telegram настройки
       BOT_TOKEN: ${BOT_TOKEN}
 
-      # База данных
+      # База данных (ВНУТРЕННИЕ адреса контейнеров)
       DB_HOST: postgres
-      DB_PORT: 5432
+      DB_PORT: 5432  # Внутренний порт контейнера
       DB_NAME: festival_bot
       DB_USER: festival_user
       DB_PASSWORD: ${DB_PASSWORD:-strong_password_123}
 
-      # Redis
+      # Redis (ВНУТРЕННИЕ адреса контейнеров)
       REDIS_HOST: redis
-      REDIS_PORT: 6379
+      REDIS_PORT: 6379  # Внутренний порт контейнера
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password_123}
 
       # Права доступа
@@ -150,7 +150,7 @@ services:
       - '--web.external-url=http://spbbot.mjf-bstage.ru/metrics/'
       - '--web.route-prefix=/'
     ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
+      - "${PROMETHEUS_PORT:-9091}:9090"  # Внешний порт 9091
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -159,7 +159,7 @@ services:
     restart: unless-stopped
     profiles: ["monitoring"]
 
-  # Мониторинг - Grafana (порт 3001 вместо 3000)
+  # Мониторинг - Grafana
   grafana:
     image: grafana/grafana:latest
     container_name: festival_grafana
@@ -170,7 +170,7 @@ services:
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
       - GF_SERVER_HTTP_PORT=3000
     ports:
-      - "3001:3000"  # Внешний порт 3001, внутренний 3000
+      - "${GRAFANA_PORT:-3001}:3000"  # Внешний порт 3001
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
@@ -197,6 +197,7 @@ volumes:
 networks:
   festival_network:
     driver: bridge
+    name: festival_network  # Уникальное имя сети
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.21.0.0/16  # Другая подсеть, чтобы избежать конфликтов
