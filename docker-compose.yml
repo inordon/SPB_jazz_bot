@@ -1,81 +1,202 @@
 version: '3.8'
 
 services:
+  # PostgreSQL база данных
   postgres:
-    image: postgres:15
+    image: postgres:15-alpine
+    container_name: festival_postgres
     environment:
       POSTGRES_DB: festival_bot
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: festival_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-strong_password_123}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./sql/seed_data.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
     ports:
-      - "5432:5432"
-    restart: unless-stopped
+      - "${DB_PORT:-5432}:5432"
     networks:
       - festival_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U festival_user -d festival_bot"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
+  # Redis для кэширования
+  redis:
+    image: redis:7-alpine
+    container_name: festival_redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password_123}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - festival_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Telegram бот
   bot:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - PYTHON_VERSION=${PYTHON_VERSION:-3.11}
+    container_name: festival_bot
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
+      # Telegram настройки
       BOT_TOKEN: ${BOT_TOKEN}
+
+      # База данных
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: festival_bot
-      DB_USER: postgres
-      DB_PASSWORD: password
+      DB_USER: festival_user
+      DB_PASSWORD: ${DB_PASSWORD:-strong_password_123}
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password_123}
+
+      # Права доступа
       ADMIN_IDS: ${ADMIN_IDS}
-      SUPPORT_STAFF_IDS: ${SUPPORT_STAFF_IDS}
-      SUPPORT_GROUP_ID: ${SUPPORT_GROUP_ID}
+      SUPPORT_STAFF_IDS: ${SUPPORT_STAFF_IDS:-}
+
+      # Telegram каналы
+      SUPPORT_GROUP_ID: ${SUPPORT_GROUP_ID:-}
       SUPPORT_GROUP_TOPICS: ${SUPPORT_GROUP_TOPICS:-true}
-      FEEDBACK_CHANNEL_ID: ${FEEDBACK_CHANNEL_ID}
+      FEEDBACK_CHANNEL_ID: ${FEEDBACK_CHANNEL_ID:-}
+
+      # Email настройки
       SMTP_SERVER: ${SMTP_SERVER:-smtp.gmail.com}
       SMTP_PORT: ${SMTP_PORT:-587}
-      EMAIL_USER: ${EMAIL_USER}
-      EMAIL_PASSWORD: ${EMAIL_PASSWORD}
-      SUPPORT_EMAIL: ${SUPPORT_EMAIL}
+      EMAIL_USER: ${EMAIL_USER:-}
+      EMAIL_PASSWORD: ${EMAIL_PASSWORD:-}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+
+      # Ссылки
       TICKET_PURCHASE_URL: ${TICKET_PURCHASE_URL:-https://tickets.festival.com}
-      MAPS_IMAGES_PATH: /app/images/
+
+      # Координаты
       FESTIVAL_COORDINATES: ${FESTIVAL_COORDINATES:-55.7558,37.6176}
+      FOODCOURT_COORDINATES: ${FOODCOURT_COORDINATES:-55.7562,37.6174}
+      WORKSHOPS_COORDINATES: ${WORKSHOPS_COORDINATES:-55.7556,37.6182}
+      SOUVENIRS_COORDINATES: ${SOUVENIRS_COORDINATES:-55.7560,37.6170}
+      TOILETS_COORDINATES: ${TOILETS_COORDINATES:-55.7559,37.6178}
+      MEDICAL_COORDINATES: ${MEDICAL_COORDINATES:-55.7558,37.6176}
+
+      # Пути
+      MAPS_IMAGES_PATH: /app/images/
+
+      # Настройки окружения
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      TZ: ${TIMEZONE:-Europe/Moscow}
+      PYTHONUNBUFFERED: 1
+      PYTHONPATH: /app/src
+
     volumes:
       - ./logs:/app/logs
       - ./images:/app/images
       - ./backups:/app/backups
-    restart: unless-stopped
+      - ./config:/app/config:ro
+    ports:
+      - "8080:8080"  # Веб-интерфейс бота
     networks:
       - festival_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "/app/health_check.py"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
 
-  nginx:
-    image: nginx:alpine
+  # Мониторинг - Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: festival_prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+      - '--web.external-url=http://spbbot.mjf-bstage.ru/metrics/'
+      - '--web.route-prefix=/'
     ports:
-      - "80:80"
-      - "443:443"
+      - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
-      - ./config/nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/nginx/ssl
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - festival_network
+    restart: unless-stopped
+    profiles: ["monitoring"]
+
+  # Мониторинг - Grafana (порт 3001 вместо 3000)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: festival_grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin_password_123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://spbbot.mjf-bstage.ru/monitoring/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_SERVER_HTTP_PORT=3000
+    ports:
+      - "3001:3000"  # Внешний порт 3001, внутренний 3000
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - festival_network
+    restart: unless-stopped
+    profiles: ["monitoring"]
     depends_on:
-      - bot
-    restart: unless-stopped
-    networks:
-      - festival_network
+      - prometheus
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-    networks:
-      - festival_network
-
+# Именованные тома
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
 
+# Сеть
 networks:
   festival_network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
